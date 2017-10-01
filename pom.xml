@@ -82,6 +82,27 @@
                </execution>
             </executions>
          </plugin>
+         <plugin>
+            <groupId>org.codehaus.mojo</groupId>
+            <artifactId>exec-maven-plugin</artifactId>
+            <version>1.6.0</version>
+            <executions>
+               <execution>
+                  <id>make-exec</id>
+                  <phase>install</phase>
+                  <goals>
+                     <goal>exec</goal>
+                  </goals>
+                  <inherited>false</inherited>
+               </execution>
+            </executions>
+            <configuration>
+               <executable>make</executable>
+               <arguments>
+                  <argument>build-avms</argument>
+               </arguments>
+            </configuration>
+         </plugin>
       </plugins>
    </build>
 </project>

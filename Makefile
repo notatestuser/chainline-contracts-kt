@@ -1,4 +1,4 @@
-build: init-submodules build-classes build-neoj build-avms
+build: init-submodules build-neoj build-classes
 
 build-classes:
 	mvn clean install

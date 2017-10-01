@@ -7,6 +7,7 @@ build-neoj:
 	dotnet build -c Release ./vendor/neo-compiler/neoj/neoj.csproj
 
 build-avms:
+	rm ./*.avm && \
 	find ./target/classes/chainline -name "*.class" | xargs -n 1 dotnet ./vendor/neo-compiler/neoj/bin/Release/netcoreapp1.1/neoj.dll
 
 test: submodules

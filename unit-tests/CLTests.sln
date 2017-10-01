@@ -3,6 +3,8 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "CLTests", "CLTests.csproj", "{65A513A9-84A9-447A-BB07-5D75A390C9BD}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "neo-vm", "..\vendor\neo-vm\src\neo-vm\neo-vm.csproj", "{BE5C54C9-5AF7-47D5-B02F-7CA76A97FDCC}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -13,5 +15,9 @@ Global
 		{65A513A9-84A9-447A-BB07-5D75A390C9BD}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{65A513A9-84A9-447A-BB07-5D75A390C9BD}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{65A513A9-84A9-447A-BB07-5D75A390C9BD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE5C54C9-5AF7-47D5-B02F-7CA76A97FDCC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE5C54C9-5AF7-47D5-B02F-7CA76A97FDCC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE5C54C9-5AF7-47D5-B02F-7CA76A97FDCC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE5C54C9-5AF7-47D5-B02F-7CA76A97FDCC}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 EndGlobal

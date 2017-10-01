@@ -5,7 +5,7 @@ using System.IO;
 using Xunit.Abstractions;
 
 namespace CLTests.Utilities {
-   class ExecutionHelper {
+   public class ExecutionHelper {
       private const string BasePath = "../../../../";
 
       private static readonly object Lock = new Object();

@@ -10,11 +10,12 @@
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170427-09" />
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
-    <PackageReference Include="Neo" Version="2.3.3" />
-    <PackageReference Include="Neo.VM" Version="2.0.3" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Utilities\" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\vendor\neo-vm\src\neo-vm\neo-vm.csproj" />
   </ItemGroup>
 </Project>

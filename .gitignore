@@ -7,8 +7,11 @@ chainline-contracts-kt.iml
 target
 vendor/*.jar
 *.avm
-.mvn-home
-.mvn-repo
+
+# unit-tests csproj bits
+*.userprefs
+bin
+obj
 
 # Compiled class file
 *.class

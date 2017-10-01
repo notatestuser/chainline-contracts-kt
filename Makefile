@@ -1,4 +1,4 @@
-build: update-submodules build-classes build-neoj build-avms
+build: init-submodules build-classes build-neoj build-avms
 
 build-classes:
 	mvn clean install
@@ -12,7 +12,7 @@ build-avms:
 test: submodules
 	mvn test
 
-update-submodules:
-	git submodule update --recursive .
+init-submodules:
+	git submodule update --init
 
-.PHONY: build build-classes build-neoj build-avms test update-submodules
+.PHONY: build build-classes build-neoj build-avms test init-submodules

@@ -1,3 +1,15 @@
+chainline-contracts-kt.iml
+.idea
+.vscode
+.project
+.classpath
+.settings
+target
+vendor/*.jar
+*.avm
+.mvn-home
+.mvn-repo
+
 # Compiled class file
 *.class
 

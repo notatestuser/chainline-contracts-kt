@@ -4,3 +4,6 @@
 [submodule "vendor/neo-devpack-java"]
 	path = vendor/neo-devpack-java
 	url = https://github.com/notatestuser/neo-devpack-java.git
+[submodule "vendor/neo-vm"]
+	path = vendor/neo-vm
+	url = https://github.com/notatestuser/neo-vm.git

@@ -8,7 +8,5 @@ The smart contracts powering Chain Line are written in Kotlin for the [Neo](http
 * Install Maven
 * Clone this repository and run `make`
 
-Compiled contract classes may be found in `target/classes`.
-
 Compiled contract avm files may be found in the root directory of the project.
 

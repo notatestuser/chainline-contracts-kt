@@ -3,6 +3,13 @@ package chainline.contracts;
 import org.neo.smartcontract.framework.SmartContract
 import java.lang.StringBuilder
 
+//                  __/___
+//            _____/______|
+//    _______/_____\_______\_____
+//    \              < < <       |
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//     C  H  A  I  N    L  I  N  E
+
 class WalletContract : SmartContract() {
    // public key
    // converter: https://conv.darkbyte.ru/

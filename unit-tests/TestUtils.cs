@@ -8,9 +8,7 @@ namespace CLTests {
 
       [Fact]
       public void TestArrayReverse() {
-         byte[] program = executionHelper.Compile("HubContract");
-         var engine = new ExecutionEngine(null, new Crypto());
-         engine.LoadScript(program);
+         ExecutionEngine engine = LoadContract("HubContract");
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(new byte[] { 0 });  // arg1
@@ -19,7 +17,6 @@ namespace CLTests {
 
             engine.LoadScript(sb.ToArray());
          }
-
          engine.Execute();
          AssertNoFaultState(engine);
 

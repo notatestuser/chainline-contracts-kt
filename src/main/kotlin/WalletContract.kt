@@ -1,4 +1,4 @@
-package chainline.contracts;
+package chainline.contracts
 
 import org.neo.smartcontract.framework.SmartContract
 import java.lang.StringBuilder

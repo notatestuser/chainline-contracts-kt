@@ -1,10 +1,11 @@
-package chainline.contracts;
+package chainline.contracts
 
 import org.neo.smartcontract.framework.Helper.*
 import org.neo.smartcontract.framework.SmartContract
 import org.neo.smartcontract.framework.services.neo.Blockchain
 import org.neo.smartcontract.framework.services.neo.Runtime
 import org.neo.smartcontract.framework.services.neo.Storage
+import org.neo.smartcontract.framework.services.system.ExecutionEngine
 import java.math.BigInteger
 
 //                  __/___
@@ -18,6 +19,7 @@ import java.math.BigInteger
 // this code is kind of ugly!
 
 class HubContract : SmartContract() {
+
    fun Main(operation: String, arg0: ByteArray, arg1: ByteArray, arg2: ByteArray, arg3: ByteArray) : Any {
       // The entry points for each of the supported operations follow
 
@@ -52,25 +54,27 @@ class HubContract : SmartContract() {
       return false
    }
 
-   // -= Operations =-
+   // -================-
+   // -=  Operations  =-
+   // -================-
 
    private fun getWalletBalance(scriptHash: ByteArray): BigInteger {
       val account = Blockchain.getAccount(scriptHash)
-      return BigInteger.valueOf(
-               account.getBalance(getAssetId()))
+      Runtime.notify("CLFoundWallet", account.scriptHash())
+      return BigInteger.valueOf(account.getBalance(getAssetId()))
    }
 
    private fun validateWallet(scriptHash: ByteArray, pubKey: ByteArray): Boolean {
-      val reversedScriptHash = reverseArray(scriptHash)
+      val reversedHubHash = reverseArray(ExecutionEngine.executingScriptHash())
       val expectedScript =
             getWalletScriptP1()
                .concat(pubKey)
                .concat(getWalletScriptP2())
-               .concat(reversedScriptHash)
+               .concat(reversedHubHash)
                .concat(getWalletScriptP3())
-      val expectedHash = hash160(expectedScript)
-      if (scriptHash == expectedHash) return true
-      Runtime.notify("CLWalletValidateFail")
+      val expectedScriptHash = hash160(expectedScript)
+      if (scriptHash == expectedScriptHash) return true
+      Runtime.notify("CLWalletValidateFail", expectedScriptHash, expectedScript)
       return false
    }
 
@@ -90,7 +94,9 @@ class HubContract : SmartContract() {
       return true
    }
 
-   // -= Storage =-
+   // -=============-
+   // -=  Storage  =-
+   // -=============-
 
    private fun getAssetId(): ByteArray {
       return Storage.get(Storage.currentContext(), "AssetID")
@@ -108,7 +114,9 @@ class HubContract : SmartContract() {
       return Storage.get(Storage.currentContext(), "WalletScriptP3")
    }
 
-   // -= Utils =-
+   // -=============-
+   // -=   Utils   =-
+   // -=============-
 
    private fun reverseArray(input: ByteArray): ByteArray {
       var reversed = concat(

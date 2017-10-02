@@ -1,6 +1,5 @@
 package chainline.contracts;
 
-import org.neo.smartcontract.framework.Helper
 import org.neo.smartcontract.framework.SmartContract
 import java.lang.StringBuilder
 

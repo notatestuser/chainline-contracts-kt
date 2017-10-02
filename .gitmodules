@@ -1,6 +1,6 @@
 [submodule "vendor/neo-compiler"]
 	path = vendor/neo-compiler
-	url = https://github.com/neo-project/neo-compiler.git
+	url = https://github.com/notatestuser/neo-compiler.git
 [submodule "vendor/neo-devpack-java"]
 	path = vendor/neo-devpack-java
 	url = https://github.com/notatestuser/neo-devpack-java.git

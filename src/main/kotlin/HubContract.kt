@@ -31,7 +31,7 @@ class HubContract : SmartContract() {
 
       // Sanity Tests
       if (operation == "test_arrayrev")
-         return reverseArray(arg0)
+         return arg0.reverse()
       if (operation == "test_arrayeq")
          return arg0 == arg1
       if (operation == "test_arrayneq")
@@ -65,12 +65,11 @@ class HubContract : SmartContract() {
    }
 
    private fun validateWallet(scriptHash: ByteArray, pubKey: ByteArray): Boolean {
-      val reversedHubHash = reverseArray(ExecutionEngine.executingScriptHash())
       val expectedScript =
             getWalletScriptP1()
                .concat(pubKey)
                .concat(getWalletScriptP2())
-               .concat(reversedHubHash)
+               .concat(ExecutionEngine.executingScriptHash())
                .concat(getWalletScriptP3())
       val expectedScriptHash = hash160(expectedScript)
       if (scriptHash == expectedScriptHash) return true
@@ -78,13 +77,13 @@ class HubContract : SmartContract() {
       return false
    }
 
-   private fun isInitialized(): Any {
+   private fun isInitialized(): Boolean {
       return ! Storage.get(Storage.currentContext(), "Initialized").isEmpty()
    }
 
    private fun init(assetId: ByteArray, walletScriptP1: ByteArray, walletScriptP2: ByteArray,
                     walletScriptP3: ByteArray): Boolean {
-      if ((isInitialized() as Boolean?)!!) return false
+      if (isInitialized()) return false
       Storage.put(Storage.currentContext(), "AssetID", assetId)
       Storage.put(Storage.currentContext(), "WalletScriptP1", walletScriptP1)
       Storage.put(Storage.currentContext(), "WalletScriptP2", walletScriptP2)
@@ -129,7 +128,13 @@ class HubContract : SmartContract() {
       return reversed
    }
 
+   // -==============-
    // -= Extensions =-
+   // -==============-
+
+   fun ByteArray.reverse(): ByteArray {
+      return reverseArray(this)
+   }
 
    fun ByteArray.concat(b2: ByteArray): ByteArray {
       return concat(this, b2)

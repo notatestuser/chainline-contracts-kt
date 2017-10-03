@@ -23,7 +23,7 @@ object Testbed : SmartContract() {
       if (operation == "test_bigintsize")
          return args[0].size
       if (operation == "test_bigintpad")
-         return padIntTo5(args[0] as BigInteger?)
+         return padIntToBytes(5, args[0] as BigInteger?)
       if (operation == "test_timestamp") {
          val header = Blockchain.getHeader(Blockchain.height())
          return header.timestamp()
@@ -31,10 +31,10 @@ object Testbed : SmartContract() {
       return false
    }
 
-   private fun padIntTo5(toPad: BigInteger?): ByteArray {
+   private fun padIntToBytes(count: Int, toPad: BigInteger?): ByteArray {
       var zero = byteArrayOf(0)
       var bytes = toPad!!.toByteArray()
-      while (bytes.size < 5) {
+      while (bytes.size < count) {
          bytes = bytes.concat(zero)
       }
       return bytes

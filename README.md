@@ -18,9 +18,7 @@ Compiled contract avm files may be found in the root directory of the project.
 
 ## Running the tests
 
-* Run `make test`
-
-or
+Run `make test` (the easy way) or
 
 * Install Visual Studio
 * Open the unit tests project in `./unit-tests/CLTests.sln`

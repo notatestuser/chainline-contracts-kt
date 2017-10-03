@@ -18,7 +18,9 @@ import java.math.BigInteger
 // The compiler doesn't support member fields or companion classes so
 // this code is kind of ugly!
 
-class HubContract : SmartContract() {
+object HubContract : SmartContract() {
+
+   private val MAX_TX_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
 
    fun Main(operation: String, vararg args: ByteArray) : Any {
       // The entry points for each of the supported operations follow
@@ -28,16 +30,6 @@ class HubContract : SmartContract() {
          return init(args[0], args[1], args[2], args[3])
       if (operation == "is_initialized")
          return isInitialized()
-
-      // Sanity Tests
-      if (operation == "test_arrayrev")
-         return args[0].reverse()
-      if (operation == "test_arrayeq")
-         return args[0] == args[1]
-      if (operation == "test_arrayneq")
-         return args[0] != args[1]
-      if (operation == "test_bigintsize")
-         return args[0].size
 
       // TODO: can't call IsInitialized() from here apparently
       if (Storage.get(Storage.currentContext(), "Initialized").isEmpty()) {
@@ -52,6 +44,26 @@ class HubContract : SmartContract() {
          return validateWallet(args[0], args[1])
 
       return false
+   }
+
+   // -==================-
+   // -= Initialization =-
+   // -==================-
+
+   private fun isInitialized(): Boolean {
+      return ! Storage.get(Storage.currentContext(), "Initialized").isEmpty()
+   }
+
+   private fun init(assetId: ByteArray, walletScriptP1: ByteArray, walletScriptP2: ByteArray,
+                    walletScriptP3: ByteArray): Boolean {
+      if (isInitialized()) return false
+      Storage.put(Storage.currentContext(), "AssetID", assetId)
+      Storage.put(Storage.currentContext(), "WalletScriptP1", walletScriptP1)
+      Storage.put(Storage.currentContext(), "WalletScriptP2", walletScriptP2)
+      Storage.put(Storage.currentContext(), "WalletScriptP3", walletScriptP3)
+      Storage.put(Storage.currentContext(), "Initialized", 1 as ByteArray)
+      Runtime.notify("CLHubInitialized")
+      return true
    }
 
    // -================-
@@ -75,22 +87,6 @@ class HubContract : SmartContract() {
       if (scriptHash == expectedScriptHash) return true
       Runtime.notify("CLWalletValidateFail", expectedScriptHash, expectedScript)
       return false
-   }
-
-   private fun isInitialized(): Boolean {
-      return ! Storage.get(Storage.currentContext(), "Initialized").isEmpty()
-   }
-
-   private fun init(assetId: ByteArray, walletScriptP1: ByteArray, walletScriptP2: ByteArray,
-                    walletScriptP3: ByteArray): Boolean {
-      if (isInitialized()) return false
-      Storage.put(Storage.currentContext(), "AssetID", assetId)
-      Storage.put(Storage.currentContext(), "WalletScriptP1", walletScriptP1)
-      Storage.put(Storage.currentContext(), "WalletScriptP2", walletScriptP2)
-      Storage.put(Storage.currentContext(), "WalletScriptP3", walletScriptP3)
-      Storage.put(Storage.currentContext(), "Initialized", 1 as ByteArray)
-      Runtime.notify("CLHubInitialized")
-      return true
    }
 
    // -=============-

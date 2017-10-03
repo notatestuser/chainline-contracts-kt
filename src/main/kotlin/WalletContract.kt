@@ -10,7 +10,7 @@ import java.lang.StringBuilder
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //     C  H  A  I  N    L  I  N  E
 
-class WalletContract : SmartContract() {
+object WalletContract : SmartContract() {
    // public key
    // converter: https://conv.darkbyte.ru/
 

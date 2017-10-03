@@ -12,15 +12,17 @@ namespace CLTests {
          this.executionHelper = new ExecutionHelper(output);
       }
 
-      protected void AssertNoFaultState(ExecutionEngine engine) {
-         VMHelper.AssertNoFaultState(engine, output);
-      }
-
       protected ExecutionEngine LoadContract(string contractName) {
-         byte[] program = executionHelper.Compile("HubContract");
+         byte[] program = executionHelper.Compile(contractName);
          var engine = new ExecutionEngine(null, new Crypto());
          engine.LoadScript(program);
          return engine;
+      }
+
+      protected void ExecuteScript(ExecutionEngine engine, ScriptBuilder sb) {
+         engine.LoadScript(sb.ToArray());
+         engine.Execute();
+         VMHelper.AssertNoFaultState(engine, output);
       }
    }
 }

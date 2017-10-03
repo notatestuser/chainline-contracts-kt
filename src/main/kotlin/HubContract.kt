@@ -20,24 +20,24 @@ import java.math.BigInteger
 
 class HubContract : SmartContract() {
 
-   fun Main(operation: String, arg0: ByteArray, arg1: ByteArray, arg2: ByteArray, arg3: ByteArray) : Any {
+   fun Main(operation: String, vararg args: ByteArray) : Any {
       // The entry points for each of the supported operations follow
 
       // Initialization
       if (operation == "initialize")
-         return init(arg0, arg1, arg2, arg3)
+         return init(args[0], args[1], args[2], args[3])
       if (operation == "is_initialized")
          return isInitialized()
 
       // Sanity Tests
       if (operation == "test_arrayrev")
-         return arg0.reverse()
+         return args[0].reverse()
       if (operation == "test_arrayeq")
-         return arg0 == arg1
+         return args[0] == args[1]
       if (operation == "test_arrayneq")
-         return arg0 != arg1
+         return args[0] != args[1]
       if (operation == "test_bigintsize")
-         return arg0.size
+         return args[0].size
 
       // TODO: can't call IsInitialized() from here apparently
       if (Storage.get(Storage.currentContext(), "Initialized").isEmpty()) {
@@ -47,9 +47,9 @@ class HubContract : SmartContract() {
 
       // Operations (only when initialized)
       if (operation == "wallet_getbalance")
-         return getWalletBalance(arg0)
+         return getWalletBalance(args[0])
       if (operation == "wallet_validate")
-         return validateWallet(arg0, arg1)
+         return validateWallet(args[0], args[1])
 
       return false
    }

@@ -11,10 +11,10 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // arg1
-            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // arg0
+            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // args[1]
+            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // args[0]
+            sb.EmitPush(2);
+            sb.Emit(OpCode.PACK);
             sb.EmitPush("test_arrayeq");  // operation
 
             engine.LoadScript(sb.ToArray());
@@ -31,10 +31,10 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 5, 4, 3, 2, 1 });  // arg1
-            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // arg0
+            sb.EmitPush(new byte[] { 5, 4, 3, 2, 1 });  // args[1]
+            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // args[0]
+            sb.EmitPush(2);
+            sb.Emit(OpCode.PACK);
             sb.EmitPush("test_arrayeq");  // operation
 
             engine.LoadScript(sb.ToArray());
@@ -51,10 +51,10 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 5, 4, 3, 2, 1 });  // arg1
-            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // arg0
+            sb.EmitPush(new byte[] { 5, 4, 3, 2, 1 });  // args[1]
+            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // args[0]
+            sb.EmitPush(2);
+            sb.Emit(OpCode.PACK);
             sb.EmitPush("test_arrayneq");  // operation
 
             engine.LoadScript(sb.ToArray());
@@ -71,10 +71,10 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // arg1
-            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // arg0
+            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // args[1]
+            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5 });  // args[0]
+            sb.EmitPush(2);
+            sb.Emit(OpCode.PACK);
             sb.EmitPush("test_arrayneq");  // operation
 
             engine.LoadScript(sb.ToArray());
@@ -91,10 +91,9 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });  // arg1
-            sb.EmitPush(127);  // arg0
+            sb.EmitPush(127);  // args[0]
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
             sb.EmitPush("test_bigintsize");  // operation
 
             engine.LoadScript(sb.ToArray());
@@ -111,10 +110,9 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });  // arg1
-            sb.EmitPush(128);  // arg0
+            sb.EmitPush(128);  // args[0]
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
             sb.EmitPush("test_bigintsize");  // operation
 
             engine.LoadScript(sb.ToArray());
@@ -131,10 +129,9 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });  // arg1
-            sb.EmitPush(32767);  // arg0
+            sb.EmitPush(32767);  // args[0]
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
             sb.EmitPush("test_bigintsize");  // operation
 
             engine.LoadScript(sb.ToArray());
@@ -151,10 +148,9 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });
-            sb.EmitPush(new byte[] { 0 });  // arg1
-            sb.EmitPush(32768);  // arg0
+            sb.EmitPush(32768);  // args[0]
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
             sb.EmitPush("test_bigintsize");  // operation
 
             engine.LoadScript(sb.ToArray());

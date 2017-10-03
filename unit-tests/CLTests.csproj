@@ -15,6 +15,7 @@
   <ItemGroup>
     <Folder Include="Utilities\" />
     <Folder Include="Tests\" />
+    <Folder Include="Misc\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\vendor\neo-vm\src\neo-vm\neo-vm.csproj" />

@@ -1,14 +1,15 @@
 package chainline.contracts
 
-import org.neo.smartcontract.framework.SmartContract
 import java.lang.StringBuilder
+import org.neo.smartcontract.framework.SmartContract
 
-//                  __/___
-//            _____/______|
-//    _______/_____\_______\_____
-//    \              < < <       |
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//     C  H  A  I  N    L  I  N  E
+//                     __ __
+//               __ __|__|__|__ __
+//         __ __|__|__|__|__|__|__|
+//   _____|__|__|__|__|__|__|__|__|__
+//   \  < < <                        |
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//      C  H  A  I  N     L  I  N  E
 
 object WalletContract : SmartContract() {
    // public key

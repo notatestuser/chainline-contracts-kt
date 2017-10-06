@@ -183,5 +183,37 @@ namespace CLTests {
          var result = engine.EvaluationStack.Peek().GetByteArray();
          Assert.Equal(new byte[] { 16, 0, 0, 0, 0 }, result);
       }
+
+      [Fact]
+      public void TestZeroPad() {
+         ExecutionEngine engine = LoadContract("Testbed");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(0);  // args[0]
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_bigintpad");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetBigInteger();
+         Assert.Equal(0, result);
+      }
+
+      [Fact]
+      public void TestZeroPadBytes() {
+         ExecutionEngine engine = LoadContract("Testbed");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(0);  // args[0]
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_bigintpad");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(new byte[] { 0, 0, 0, 0, 0 }, result);
+      }
    }
 }

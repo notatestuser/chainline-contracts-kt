@@ -12,8 +12,6 @@ object Testbed : SmartContract() {
    fun Main(operation: String, vararg args: ByteArray): Any {
       // Sanity Tests
       val field2 = "To the moon!"
-      if (operation == "test_field")
-         return field2
       if (operation == "test_arrayrev")
          return args[0].reverse()
       if (operation == "test_arrayeq")
@@ -24,6 +22,8 @@ object Testbed : SmartContract() {
          return args[0].size
       if (operation == "test_bigintpad")
          return padIntToBytes(5, args[0] as BigInteger?)
+      if (operation == "test_field")
+         return field2
       if (operation == "test_timestamp") {
          val header = Blockchain.getHeader(Blockchain.height())
          return header.timestamp()
@@ -32,8 +32,9 @@ object Testbed : SmartContract() {
    }
 
    private fun padIntToBytes(count: Int, toPad: BigInteger?): ByteArray {
-      var zero = byteArrayOf(0)
       var bytes = toPad!!.toByteArray()
+      if (bytes.size >= count) return bytes
+      var zero = byteArrayOf(0)
       while (bytes.size < count) {
          bytes = bytes.concat(zero)
       }

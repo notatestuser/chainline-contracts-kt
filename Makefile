@@ -1,4 +1,12 @@
-build: build-neoj build-classes build-avms
+build: build-neoj build-classes
+
+build-test: build-classes test
+
+watch: build-neoj install-chokidar
+	chokidar src/**/*.kt -c "make build-test"
+
+watch-classes: build-neoj install-chokidar
+	chokidar target/**/*.class -m "make build-avms && make test"
 
 build-classes:
 	mvn clean install
@@ -15,4 +23,7 @@ test: init-submodules
 
 init-submodules:
 	git submodule update --init
+
+install-chokidar:
+	npm i -g chokidar-cli
 

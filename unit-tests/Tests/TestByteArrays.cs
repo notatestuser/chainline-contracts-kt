@@ -88,5 +88,30 @@ namespace CLTests {
          bool result = engine.EvaluationStack.Peek().GetBoolean();
          Assert.False(result);
       }
+
+      [Fact]
+      public void TestByteArraySubstr() {
+         ExecutionEngine engine = LoadContract("Testbed");
+
+         var randomBlob = new byte[] {
+            0xFF, 0xFF, 0xFF, 0x7F,
+            10, 0, 0, 0, 0,
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            0,
+         };
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(5);
+            sb.EmitPush(4);
+            sb.EmitPush(randomBlob);  // args[1]
+            sb.EmitPush(3);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_substr");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(new byte[] { 10, 0, 0, 0, 0 }, result);
+      }
    }
 }

@@ -24,12 +24,20 @@ object Testbed : SmartContract() {
          return padIntToBytes(5, args[0] as BigInteger?)
       if (operation == "test_field")
          return field2
+      if (operation == "test_substr")
+         // the line below breaks stuff
+         //return substr(args[0], args[1] as Int?, args[2] as Int?)
+         return args[0].range(args[1] as Int?, args[2] as Int?)
       if (operation == "test_timestamp") {
          val header = Blockchain.getHeader(Blockchain.height())
          return header.timestamp()
       }
       return false
    }
+
+//   private fun substr(input: ByteArray, from: Int?, to: Int?) {
+//      input.range(from!!, to!!)
+//   }
 
    private fun padIntToBytes(count: Int, toPad: BigInteger?): ByteArray {
       var bytes = toPad!!.toByteArray()
@@ -54,6 +62,10 @@ object Testbed : SmartContract() {
 
    fun ByteArray.reverse(): ByteArray {
       return reverseArray(this)
+   }
+
+   fun ByteArray.range(from: Int?, to: Int?): ByteArray {
+      return range(this, from!!, to!!)
    }
 
    fun ByteArray.concat(b2: ByteArray): ByteArray {

@@ -1,5 +1,4 @@
-﻿using System;
-using Neo.VM;
+﻿using Neo.VM;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -24,14 +23,56 @@ namespace CLTests {
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
 
-         output.WriteLine(BitConverter.ToString(result));
-
          Assert.Equal(new byte[] {
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             0xFF, 0xFF, 0xFF, 0x7F, 0,  // value is 5 bytes
             1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
             0,  // false
          }, result);
+      }
+
+      [Fact]
+      public void TestGetAttribute() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(new byte[] {
+               0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+               0xFF, 0xFF, 0xFF, 0x7F, 0,  // value is 5 bytes
+               5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+               1,  // true
+            });
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_reservation_isMultiSigUnlocked");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetBoolean();
+
+         Assert.True(result);
+      }
+
+      [Fact]
+      public void TestGetAttribute2() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(new byte[] {
+               0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+               0xFF, 0xFF, 0xFF, 0x7F, 0,  // value is 5 bytes
+               5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+               0,  // true
+            });
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_reservation_isMultiSigUnlocked");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetBoolean();
+
+         Assert.False(result);
       }
 
       [Fact]
@@ -55,6 +96,64 @@ namespace CLTests {
 
          var result = engine.EvaluationStack.Peek().GetBigInteger();
          Assert.Equal(2147483647, result);
+      }
+
+      [Fact]
+      public void TestGetTotalReservationHoldValue() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         var reservations = new byte[] {
+            // entry 1
+            0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            0,  // false
+            // entry 2
+            0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            0,  // false
+         };
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(reservations);  // args[0]
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_reservation_getTotalOnHoldValue");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetBigInteger();
+         Assert.Equal(20, result);
+      }
+
+      [Fact]
+      public void TestGetTotalReservationHoldExpiry() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         var reservations = new byte[] {
+            // entry 1
+            0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            0,  // false
+            // entry 2
+            0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            0,  // false
+         };
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(reservations);  // args[0]
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_reservation_getTotalOnHoldValue");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetBigInteger();
+         Assert.Equal(10, result);
       }
    }
 }

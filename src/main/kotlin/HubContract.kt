@@ -27,13 +27,12 @@ object HubContract : SmartContract() {
    // Byte array sizes
    const val VALUE_SIZE = 5
    const val TIMESTAMP_SIZE = 4
-   const val RESERVATION_SIZE = 30  // timestamp + value + scripthash + bool
+   const val RESERVATION_SIZE = 30  // timestamp + value + script hash + bool
    const val SCRIPT_HASH_SIZE = 20  // 160 bits
    const val PUBLIC_KEY_SIZE = 32 // 256 bits
 
    // Maximum values
    const val MAX_GAS_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
-
 
    fun Main(operation: String, vararg args: ByteArray) : Any {
       // The entry points for each of the supported operations follow
@@ -56,7 +55,10 @@ object HubContract : SmartContract() {
          if (operation == "test_reservation_getDestination")
             return args[0].res_getDestination()
          if (operation == "test_reservation_isMultiSigUnlocked")
-            return args[0].res_isMultiSigUnlocked()
+            return args[0].res_isMultiSigUnlocked()!!
+         if (operation == "test_reservation_getTotalOnHoldValue") {
+            return args[0].reslist_getTotalOnHoldValue()
+         }
       }
 
       // Can't call IsInitialized() from here 'cause the compiler don't like it
@@ -119,11 +121,11 @@ object HubContract : SmartContract() {
       return BigInteger.valueOf(account.getBalance(getAssetId()))
    }
 
-   private fun wallet_getBalanceOnHold(scriptHash: ScriptHash): BigInteger {
+   private fun wallet_getBalanceOnHold(scriptHash: ScriptHash): Long {
       val reservations: ByteArray = Storage.get(Storage.currentContext(), scriptHash)
-      if (reservations.isEmpty()) return 0 as BigInteger
+      if (reservations.isEmpty()) return 0
       val header = Blockchain.getHeader(Blockchain.height())
-      return reservations_getActiveHoldValue(reservations, header.timestamp())
+      return reservations_getTotalOnHoldValue(reservations, header.timestamp())
    }
 
    // -==================-
@@ -139,16 +141,17 @@ object HubContract : SmartContract() {
       return all.range(index * RESERVATION_SIZE, RESERVATION_SIZE)
    }
 
-   private fun reservations_getActiveHoldValue(all: ByteArray, nowTime: Int): BigInteger {
+   private fun reservations_getTotalOnHoldValue(all: ByteArray, nowTime: Int): Long {
       // todo: clean up expired reservation entries
+      val count = all.size
       var i = 0
-      val total = 0 as BigInteger
-      while (i < all.size) {
+      var total: Long = 0
+      while (i < count) {
          val reservation = reservations_get(all, i)
-         val expiry = reservation.res_getExpiry()
-         if (expiry > nowTime as BigInteger) {
-            val value = reservation.res_getValue()
-            total.add(value)
+         val expiry = take(reservation, TIMESTAMP_SIZE) as Int?
+         if (expiry!! > nowTime) {
+            val value = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE) as BigInteger?
+            total += value!!.toLong()
          }
          i++
       }
@@ -182,10 +185,14 @@ object HubContract : SmartContract() {
       return scriptHash
    }
 
-   private fun Reservation.res_isMultiSigUnlocked(): Boolean {
-      val trueBytes = byteArrayOf(1)
+   private fun Reservation.res_isMultiSigUnlocked(): Boolean? {
       val multiSigUnlocked = this.range(TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE, 1)
-      return multiSigUnlocked.isNotEmpty() && multiSigUnlocked == trueBytes
+      return multiSigUnlocked as Boolean?
+   }
+
+   private fun ReservationList.reslist_getTotalOnHoldValue(): Long {
+      val holdValue = reservations_getTotalOnHoldValue(this, 1)
+      return holdValue
    }
 
    // -=============-

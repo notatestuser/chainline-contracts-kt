@@ -10,11 +10,11 @@ import org.neo.smartcontract.framework.services.system.ExecutionEngine
 
 //                     __ __
 //               __ __|__|__|__ __
-//         __ __|__|__|__|__|__|__|
-//   _____|__|__|__|__|__|__|__|__|___
-//   \  < < <                         |
-// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-//      C  H  A  I  N     L  I  N  E
+//         __ __|__|__|__|__|__|__|__
+//   _____|__|__|__|__|__|__|__|__|__|__
+//   \  < < <                           |
+// ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+//       C  H  A  I  N     L  I  N  E
 
 typealias Hash160 = ByteArray
 typealias ScriptHash = ByteArray

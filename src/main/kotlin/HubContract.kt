@@ -167,15 +167,19 @@ object HubContract : SmartContract() {
 
    private fun reservations_getTotalOnHoldValue(all: ByteArray, nowTime: Int): Long {
       // todo: clean up expired reservation entries
+      if (all.isEmpty())
+         return 0
       val size = all.size
       var i = 0
       var total: Long = 0
       while (i < size) {
          val reservation = reservations_get(all, i)
-         val expiry = take(reservation, TIMESTAMP_SIZE) as Int?
-         if (expiry!! > nowTime) {
-            val value = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE) as BigInteger?
-            total += value!!.toLong()
+         val expiryBytes = take(reservation, TIMESTAMP_SIZE)
+         val expiry = BigInteger(expiryBytes)
+         if (expiry.toInt() > nowTime) {
+            val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
+            val value = BigInteger(valueBytes)
+            total += value.toLong()
          }
          i++
       }
@@ -297,10 +301,31 @@ object HubContract : SmartContract() {
       return this.range(20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + VALUE_SIZE, DEMAND_INFO_SIZE)
    }
 
-//   private fun Demand.demand_isMatched(): Boolean {
-//      val itemValue = this.demand_getItemValue()
-//
-//   }
+   private fun Demand.demand_isMatched(nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp()): Boolean {
+      val emptyScriptHash = getEmptyScriptHash()
+      val itemValue = this.demand_getItemValue()
+      val reservations = this.account_getReservations()
+      val size = reservations.size
+      var i = 0
+      while (i < size) {
+         val reservation = reservations_get(reservations, i)
+         val expiryBytes = take(reservation, TIMESTAMP_SIZE)
+         val expiry = BigInteger(expiryBytes)
+         if (expiry.toInt() > nowTime) {
+            val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
+            val value = BigInteger(valueBytes)
+            if (value >= itemValue) {  // accommodates the fee too
+               val destSH = range(reservation,TIMESTAMP_SIZE + VALUE_SIZE, SCRIPT_HASH_SIZE)
+               if (destSH != emptyScriptHash)
+                  return true
+               // reservation entry found, but it's definitely not matched up yet
+               return false
+            }
+         }
+         i++
+      }
+      return false
+   }
 
    // -=============-
    // -=  Travel   =-
@@ -312,16 +337,19 @@ object HubContract : SmartContract() {
    //   - departure (expiry) time (kept in state, see ScriptHash.account_storeState)
    //   - minimum reputation requirement
    //   - carry space available
+   //   - demand matched with (script hash)
    private fun travel_create(pickupCityHash: Hash160, dropOffCityHash: Hash160,
                              repRequired: BigInteger, carrySpace: BigInteger): Travel {
       val nil = byteArrayOf()
+      val emptyScriptHash = getEmptyScriptHash()
       val expectedSize =
-            20 + 20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE
-      // size: 43 bytes
+            20 + 20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + SCRIPT_HASH_SIZE
+      // size: 63 bytes
       val reservation = pickupCityHash
             .concat(dropOffCityHash)
             .concat(repRequired.toByteArray(REP_REQUIRED_SIZE))
             .concat(carrySpace.toByteArray(CARRY_SPACE_SIZE))
+            .concat(emptyScriptHash)
       if (reservation.size != expectedSize)
          return nil
       return reservation
@@ -345,6 +373,19 @@ object HubContract : SmartContract() {
    private fun Travel.travel_getCarrySpace(): BigInteger {
       val bytes = this.range(20 + 20 + REP_REQUIRED_SIZE, CARRY_SPACE_SIZE)
       return BigInteger(bytes)
+   }
+
+   private fun Travel.travel_getMatchScriptHash(): ScriptHash {
+      val bytes = this.range(20 + 20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, SCRIPT_HASH_SIZE)
+      return bytes
+   }
+
+   private fun Travel.travel_isMatched(): Boolean {
+      val emptyScriptHash = getEmptyScriptHash()
+      val matchScriptHash = this.travel_getMatchScriptHash()
+      if (matchScriptHash != emptyScriptHash)
+         return true
+      return false
    }
 
    // -=============-
@@ -430,14 +471,24 @@ object HubContract : SmartContract() {
       var i = 0
       while (i < size) {
          val reservation = reservations_get(reservations, i)
-         val expiry = take(reservation, TIMESTAMP_SIZE) as Int?
-         val value = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE) as BigInteger?
-         if (expiry!! > nowTime && value!!.toLong() > 0) {
+         val expiryBytes = take(reservation, TIMESTAMP_SIZE)
+         val expiry = BigInteger(expiryBytes)
+         val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
+         val value = BigInteger(valueBytes)
+         if (expiry.toInt() > nowTime && value.toLong() > 0)
             return false
-         }
          i++
       }
       return true
+   }
+
+   // -=============-
+   // -=  Helpers  =-
+   // -=============-
+
+   private fun getEmptyScriptHash(): ByteArray {
+      val emptyScriptHash = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      return emptyScriptHash
    }
 
    // -================-

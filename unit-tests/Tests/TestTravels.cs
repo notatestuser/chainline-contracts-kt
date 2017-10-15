@@ -44,7 +44,10 @@ namespace CLTests {
             // repRequired
             1, 0,
             // carrySpace
-            2
+            2,
+            // matchScriptHash
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
+            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
          };
 
          Assert.Equal(expected, result);

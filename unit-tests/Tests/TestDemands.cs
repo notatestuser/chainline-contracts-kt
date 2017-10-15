@@ -42,11 +42,7 @@ namespace CLTests {
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
 
-         var expected = new byte[] {
-            // cityHash
-            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // 10 bytes
-            5, 4, 3, 2, 1, 5, 4, 3, 2,
-            0xFF,
+         var expected = cityHash.Concat(new byte[] {
             // repRequired
             2, 0,
             // itemSize
@@ -54,7 +50,7 @@ namespace CLTests {
             // itemValue (100000000)
             0x00, 0xE1, 0xF5, 0x05, 0x00
             // info
-         }.Concat(info).ToArray();
+         }.Concat(info)).ToArray();
 
          Assert.Equal(expected, result);
       }
@@ -104,14 +100,10 @@ namespace CLTests {
       }
 
       [Fact]
-      public void TestGetDemandItemValue() {
+      public void TestGetDemandCityHash() {
          ExecutionEngine engine = LoadContract("HubContract");
 
-         var demand = new byte[] {
-            // cityHash
-            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // 10 bytes
-            5, 4, 3, 2, 1, 5, 4, 3, 2,
-            0xFF,
+         var demand = cityHash.Concat(new byte[] {
             // repRequired
             2, 0,
             // itemSize
@@ -119,7 +111,33 @@ namespace CLTests {
             // itemValue (100000000)
             0x00, 0xE1, 0xF5, 0x05, 0x00
             // info
-         }.Concat(info).ToArray();
+         }.Concat(info)).ToArray();
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(demand);
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_demand_getCityHash");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(cityHash, result);
+      }
+
+      [Fact]
+      public void TestGetDemandItemValue() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         var demand = cityHash.Concat(new byte[] {
+            // repRequired
+            2, 0,
+            // itemSize
+            1,
+            // itemValue (100000000)
+            0x00, 0xE1, 0xF5, 0x05, 0x00
+            // info
+         }.Concat(info)).ToArray();
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(demand);

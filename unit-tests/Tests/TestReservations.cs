@@ -11,11 +11,10 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(false);  // args[3]
             sb.EmitPush(new byte[] { 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 });  // args[2]
             sb.EmitPush(2147483647);   // args[1] - value
             sb.EmitPush(2147483647);  // args[0] - timestamp
-            sb.EmitPush(4);
+            sb.EmitPush(3);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_reservation_create");  // operation
             ExecuteScript(engine, sb);

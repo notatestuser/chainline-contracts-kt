@@ -56,13 +56,12 @@ object HubContract : SmartContract() {
       // Stateless tests operations
       if (TESTS_ENABLED) {
          if (operation == "test_reservation_create")
-            return reservation_create((args[0] as BigInteger?)!!, (args[1] as BigInteger?)!!,
-               args[2], (args[3] as Boolean?)!!)
+            return reservation_create(BigInteger(args[0]), BigInteger(args[1]), args[2])
          if (operation == "test_demand_create")
-            return demand_create(args[0], (args[1] as BigInteger?)!!, (args[2] as BigInteger?)!!,
-                                 (args[3] as BigInteger?)!!, args[4])
+            return demand_create(args[0], BigInteger(args[1]), BigInteger(args[2]),
+                                 BigInteger(args[3]), args[4])
          if (operation == "test_travel_create")
-            return travel_create(args[0], args[1], (args[2] as BigInteger?)!!, (args[3] as BigInteger?)!!)
+            return travel_create(args[0], args[1], BigInteger(args[2]), BigInteger(args[3]))
          if (operation == "test_reservation_getExpiry")
             return args[0].res_getExpiry()
          if (operation == "test_reservation_getValue")
@@ -73,6 +72,8 @@ object HubContract : SmartContract() {
             return args[0].res_isMultiSigUnlocked()!!
          if (operation == "test_reservation_getTotalOnHoldValue")
             return args[0].res_getTotalOnHoldValue()
+         if (operation == "test_demand_getCityHash")
+            return args[0].demand_getCityHash()
          if (operation == "test_demand_getItemValue")
             return args[0].demand_getItemValue()
          if (operation == "test_demand_getInfoBlob")
@@ -109,11 +110,12 @@ object HubContract : SmartContract() {
    private fun init(assetId: ByteArray, walletScriptP1: ByteArray, walletScriptP2: ByteArray,
                     walletScriptP3: ByteArray): Boolean {
       if (isInitialized()) return false
+      val trueBytes = byteArrayOf(1)
       Storage.put(Storage.currentContext(), "AssetID", assetId)
       Storage.put(Storage.currentContext(), "WalletScriptP1", walletScriptP1)
       Storage.put(Storage.currentContext(), "WalletScriptP2", walletScriptP2)
       Storage.put(Storage.currentContext(), "WalletScriptP3", walletScriptP3)
-      Storage.put(Storage.currentContext(), "Initialized", 1 as ByteArray)
+      Storage.put(Storage.currentContext(), "Initialized", trueBytes)
       Runtime.notify("CL:OK:HubInitialized")
       return true
    }
@@ -180,26 +182,24 @@ object HubContract : SmartContract() {
       return total
    }
 
-   private fun reservation_create(expiry: BigInteger, value: BigInteger, destination: ScriptHash,
-                                  multiSigUnlocked: Boolean): Reservation {
-      val trueBool = byteArrayOf(1)
-      val falseBool = byteArrayOf(0)
+   private fun reservation_create(expiry: BigInteger, value: BigInteger, destination: ScriptHash): Reservation {
+      val falseBytes = byteArrayOf(0)
       // size: 30 bytes
       val reservation = expiry.toByteArray(TIMESTAMP_SIZE)
             .concat(value.toByteArray(VALUE_SIZE))
             .concat(destination)  // script hash, 20 bytes
-            .concat(if (multiSigUnlocked) trueBool else falseBool)  // 1 byte
+            .concat(falseBytes)  // 1 byte
       return reservation
    }
 
    private fun Reservation.res_getExpiry(): BigInteger {
-      val expiry = this.take(TIMESTAMP_SIZE) as BigInteger?
-      return expiry!!
+      val expiryBytes = this.take(TIMESTAMP_SIZE)
+      return BigInteger(expiryBytes)
    }
 
    private fun Reservation.res_getValue(): BigInteger {
-      val value = this.range(TIMESTAMP_SIZE, VALUE_SIZE) as BigInteger?
-      return value!!
+      val valueBytes = this.range(TIMESTAMP_SIZE, VALUE_SIZE)
+      return BigInteger(valueBytes)
    }
 
    private fun Reservation.res_getDestination(): ScriptHash {
@@ -208,8 +208,9 @@ object HubContract : SmartContract() {
    }
 
    private fun Reservation.res_isMultiSigUnlocked(): Boolean? {
+      val trueBytes = byteArrayOf(1)
       val multiSigUnlocked = this.range(TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE, 1)
-      return multiSigUnlocked as Boolean?
+      return multiSigUnlocked == trueBytes
    }
 
    private fun ReservationList.res_getTotalOnHoldValue(): Long {
@@ -235,7 +236,7 @@ object HubContract : SmartContract() {
          return false
       }
       val emptyScriptHash = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-      val reservation = reservation_create(expiry, value, emptyScriptHash, false)
+      val reservation = reservation_create(expiry, value, emptyScriptHash)
       val newReservations = reservations.concat(reservation)
       reservation.account_storeReservations(newReservations)
       Runtime.notify("CL:OK:ReservedFunds", reservation)
@@ -279,22 +280,21 @@ object HubContract : SmartContract() {
 
    private fun Demand.demand_getRepRequired(): BigInteger {
       val bytes = this.range(20, REP_REQUIRED_SIZE)
-      return (bytes as BigInteger?)!!
+      return BigInteger(bytes)
    }
 
    private fun Demand.demand_getItemSize(): BigInteger {
       val bytes = this.range(20 + REP_REQUIRED_SIZE, CARRY_SPACE_SIZE)
-      return (bytes as BigInteger?)!!
+      return BigInteger(bytes)
    }
 
    private fun Demand.demand_getItemValue(): BigInteger {
       val bytes = this.range(20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, VALUE_SIZE)
-      return (bytes as BigInteger?)!!
+      return BigInteger(bytes)
    }
 
    private fun Demand.demand_getInfoBlob(): ByteArray {
-      val bytes = this.range(20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + VALUE_SIZE, DEMAND_INFO_SIZE)
-      return bytes
+      return this.range(20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + VALUE_SIZE, DEMAND_INFO_SIZE)
    }
 
 //   private fun Demand.demand_isMatched(): Boolean {
@@ -339,12 +339,12 @@ object HubContract : SmartContract() {
 
    private fun Travel.travel_getRepRequired(): BigInteger {
       val bytes = this.range(20 + 20, REP_REQUIRED_SIZE)
-      return (bytes as BigInteger?)!!
+      return BigInteger(bytes)
    }
 
    private fun Travel.travel_getCarrySpace(): BigInteger {
       val bytes = this.range(20 + 20 + REP_REQUIRED_SIZE, CARRY_SPACE_SIZE)
-      return (bytes as BigInteger?)!!
+      return BigInteger(bytes)
    }
 
    // -=============-

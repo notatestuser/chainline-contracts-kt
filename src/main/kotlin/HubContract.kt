@@ -16,23 +16,36 @@ import org.neo.smartcontract.framework.services.system.ExecutionEngine
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //      C  H  A  I  N     L  I  N  E
 
+typealias Hash160 = ByteArray
 typealias ScriptHash = ByteArray
 typealias Reservation = ByteArray
 typealias ReservationList = ByteArray
+typealias Demand = ByteArray
+typealias Travel = ByteArray
 
 object HubContract : SmartContract() {
 
    const val TESTS_ENABLED = true
 
    // Byte array sizes
-   const val VALUE_SIZE = 5
-   const val TIMESTAMP_SIZE = 4
-   const val RESERVATION_SIZE = 30  // timestamp + value + script hash + bool
-   const val SCRIPT_HASH_SIZE = 20  // 160 bits
-   const val PUBLIC_KEY_SIZE = 32 // 256 bits
+   private const val VALUE_SIZE = 5
+   private const val TIMESTAMP_SIZE = 4
+   private const val RESERVATION_SIZE = 30  // timestamp + value + script hash + bool
+   private const val SCRIPT_HASH_SIZE = 20  // 160 bits
+   private const val PUBLIC_KEY_SIZE = 32 // 256 bits
+   private const val REP_REQUIRED_SIZE = 2
+   private const val CARRY_SPACE_SIZE = 1
+   private const val DEMAND_INFO_SIZE = 128
 
    // Maximum values
-   const val MAX_GAS_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
+   private const val MAX_GAS_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
+
+   // Storage markers
+   private const val ACCOUNT_MARKER_RESERVED_FUNDS = 0x01 as Byte
+
+   // Account states
+   private const val ACCOUNT_STATE_DEMAND = 0x02 as Byte
+   private const val ACCOUNT_STATE_TRAVEL = 0x03 as Byte
 
    fun Main(operation: String, vararg args: ByteArray) : Any {
       // The entry points for each of the supported operations follow
@@ -48,6 +61,11 @@ object HubContract : SmartContract() {
          if (operation == "test_reservation_create")
             return reservation_create((args[0] as BigInteger?)!!, (args[1] as BigInteger?)!!,
                args[2], (args[3] as Boolean?)!!)
+         if (operation == "test_demand_create")
+            return demand_create(args[0], (args[1] as BigInteger?)!!, (args[2] as BigInteger?)!!,
+                                 (args[3] as BigInteger?)!!, args[4])
+         if (operation == "test_travel_create")
+            return travel_create(args[0], args[1], (args[2] as BigInteger?)!!, (args[3] as BigInteger?)!!)
          if (operation == "test_reservation_getExpiry")
             return args[0].res_getExpiry()
          if (operation == "test_reservation_getValue")
@@ -56,9 +74,14 @@ object HubContract : SmartContract() {
             return args[0].res_getDestination()
          if (operation == "test_reservation_isMultiSigUnlocked")
             return args[0].res_isMultiSigUnlocked()!!
-         if (operation == "test_reservation_getTotalOnHoldValue") {
-            return args[0].reslist_getTotalOnHoldValue()
-         }
+         if (operation == "test_reservation_getTotalOnHoldValue")
+            return args[0].res_getTotalOnHoldValue()
+         if (operation == "test_demand_getItemValue")
+            return args[0].demand_getItemValue()
+         if (operation == "test_demand_getInfoBlob")
+            return args[0].demand_getInfoBlob()
+         if (operation == "test_travel_getCarrySpace")
+            return args[0].travel_getCarrySpace()
       }
 
       // Can't call IsInitialized() from here 'cause the compiler don't like it
@@ -164,9 +187,9 @@ object HubContract : SmartContract() {
       val falseBool = byteArrayOf(0)
       // size: 30 bytes
       val reservation = expiry.toByteArray(TIMESTAMP_SIZE)
-         .concat(value.toByteArray(VALUE_SIZE))
-         .concat(destination)  // script hash, 20 bytes
-         .concat(if (multiSigUnlocked) trueBool else falseBool)  // 1 byte
+            .concat(value.toByteArray(VALUE_SIZE))
+            .concat(destination)  // script hash, 20 bytes
+            .concat(if (multiSigUnlocked) trueBool else falseBool)  // 1 byte
       return reservation
    }
 
@@ -190,9 +213,109 @@ object HubContract : SmartContract() {
       return multiSigUnlocked as Boolean?
    }
 
-   private fun ReservationList.reslist_getTotalOnHoldValue(): Long {
+   private fun ReservationList.res_getTotalOnHoldValue(): Long {
       val holdValue = reservations_getTotalOnHoldValue(this, 1)
       return holdValue
+   }
+
+   // -=============-
+   // -=  Demands  =-
+   // -=============-
+
+   //   demand details:
+   //   - product/contact info
+   //   - destination city (hashed)
+   //   - expiry (timestamp) (kept in state, see ScriptHash.account_storeState)
+   //   - minimum reputation requirement
+   //   - carry space required (sm, md, lg) (1, 2, 3)
+   private fun demand_create(cityHash: Hash160, repRequired: BigInteger, itemSize: BigInteger,
+                             itemValue: BigInteger, infoBlob: ByteArray): Demand {
+      // checking individual arg lengths doesn't seem to work here
+      // I tried a lot of things, grr compiler
+      val nil = byteArrayOf()
+      if (itemValue.toLong() > MAX_GAS_VALUE)
+         return nil
+      // size: 156 bytes
+      val expectedSize =
+            20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + VALUE_SIZE + DEMAND_INFO_SIZE
+      val demand = cityHash
+            .concat(repRequired.toByteArray(REP_REQUIRED_SIZE))
+            .concat(itemSize.toByteArray(CARRY_SPACE_SIZE))
+            .concat(itemValue.toByteArray(VALUE_SIZE))
+            .concat(infoBlob)
+      if (demand.size != expectedSize)
+         return nil
+      return demand
+   }
+
+   private fun Demand.demand_getCityHash(): Hash160 {
+      val bytes = this.take(20)  // 160 / 8
+      return bytes
+   }
+
+   private fun Demand.demand_getRepRequired(): BigInteger {
+      val bytes = this.range(20, REP_REQUIRED_SIZE)
+      return (bytes as BigInteger?)!!
+   }
+
+   private fun Demand.demand_getItemSize(): BigInteger {
+      val bytes = this.range(20 + REP_REQUIRED_SIZE, CARRY_SPACE_SIZE)
+      return (bytes as BigInteger?)!!
+   }
+
+   private fun Demand.demand_getItemValue(): BigInteger {
+      val bytes = this.range(20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, VALUE_SIZE)
+      return (bytes as BigInteger?)!!
+   }
+
+   private fun Demand.demand_getInfoBlob(): ByteArray {
+      val bytes = this.range(20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + VALUE_SIZE, DEMAND_INFO_SIZE)
+      return bytes
+   }
+
+   // -=============-
+   // -=  Travel   =-
+   // -=============-
+
+   //   travel details:
+   //   - pickup city (hashed)
+   //   - destination city (hashed)
+   //   - departure (expiry) time (kept in state, see ScriptHash.account_storeState)
+   //   - minimum reputation requirement
+   //   - carry space available
+   private fun travel_create(pickupCityHash: Hash160, destCityHash: Hash160,
+                             repRequired: BigInteger, carrySpace: BigInteger): Travel {
+      val nil = byteArrayOf()
+      val expectedSize =
+            20 + 20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE
+      // size: 43 bytes
+      val reservation = pickupCityHash
+            .concat(destCityHash)
+            .concat(repRequired.toByteArray(REP_REQUIRED_SIZE))
+            .concat(carrySpace.toByteArray(CARRY_SPACE_SIZE))
+      if (reservation.size != expectedSize)
+         return nil
+      return reservation
+   }
+
+   private fun Travel.travel_getPickupCityHash(): Hash160 {
+      val bytes = this.take(20)
+      return bytes
+   }
+
+   private fun Travel.travel_getDestCityHash(): Hash160 {
+      val bytes = this.range(20, 20)
+      return bytes
+   }
+
+   private fun Travel.travel_getRepRequired(): BigInteger {
+      val bytes = this.range(20 + 20, REP_REQUIRED_SIZE)
+      return (bytes as BigInteger?)!!
+   }
+
+   private fun Travel.travel_getCarrySpace(): BigInteger {
+      val bytes = this.range(20 + 20 + REP_REQUIRED_SIZE, CARRY_SPACE_SIZE)
+      return (bytes as BigInteger?)!!
    }
 
    // -=============-
@@ -215,28 +338,49 @@ object HubContract : SmartContract() {
       return Storage.get(Storage.currentContext(), "WalletScriptP3")
    }
 
-   // -===========-
-   // -=  Utils  =-
-   // -===========-
+   private fun ScriptHash.account_storeState(marker: ByteArray, expiry: BigInteger) {
+      val state =  expiry.toByteArray(TIMESTAMP_SIZE).concat(marker)
+      Storage.put(Storage.currentContext(), this, state)
+   }
 
-   private fun reverseArray(input: ByteArray): ByteArray {
-      var reversed = concat(
-            input[input.size - 1] as ByteArray,
-            input[input.size - 2] as ByteArray)
-      var i = input.size - 3
-      do {
-         reversed = concat(reversed, input[i] as ByteArray)
-      } while (--i >= 0)
-      return reversed
+   private fun ScriptHash.account_storeReservation(res: Reservation) {
+      val marker = byteArrayOf(ACCOUNT_MARKER_RESERVED_FUNDS)
+      val key = this.concat(marker)
+      Storage.put(Storage.currentContext(), key, res)
+   }
+
+   private fun ScriptHash.account_storeDemand(demand: Demand, expiry: BigInteger) {
+      val demandStateMarker = byteArrayOf(ACCOUNT_STATE_DEMAND)
+      if (this.account_isInNullState()) {
+         val key = this.concat(demandStateMarker)
+         Storage.put(Storage.currentContext(), key, demand)
+         this.account_storeState(demandStateMarker, expiry)
+      }
+   }
+
+   private fun ScriptHash.account_storeTravel(travel: Travel, expiry: BigInteger) {
+      val travelStateMarker = byteArrayOf(ACCOUNT_STATE_TRAVEL)
+      if (this.account_isInNullState()) {
+         val key = this.concat(travelStateMarker)
+         Storage.put(Storage.currentContext(), key, travel)
+         this.account_storeState(travelStateMarker, expiry)
+      }
+   }
+
+   private fun ScriptHash.account_isInNullState(): Boolean {
+      val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+      val state = Storage.get(Storage.currentContext(), this)
+      if (state.isEmpty())
+         return true
+      val expiry = take(state, TIMESTAMP_SIZE) as Int?
+      if (expiry!! > nowTime)
+         return true
+      return false
    }
 
    // -================-
    // -=  Extensions  =-
    // -================-
-
-   fun ByteArray.reverse(): ByteArray {
-      return reverseArray(this)
-   }
 
    fun ByteArray.concat(b2: ByteArray): ByteArray {
       return concat(this, b2)
@@ -250,13 +394,18 @@ object HubContract : SmartContract() {
       return take(this, count)
    }
 
-   fun BigInteger.toByteArray(count: Int): ByteArray {
-      var bytes = this.toByteArray()
+   fun ByteArray.pad(count: Int): ByteArray {
+      var bytes = this
       if (bytes.size >= count) return bytes
       var zero = byteArrayOf(0)
       while (bytes.size < count) {
          bytes = bytes.concat(zero)
       }
       return bytes
+   }
+
+   fun BigInteger.toByteArray(count: Int): ByteArray {
+      var bytes = this.toByteArray()
+      return bytes.pad(count)
    }
 }

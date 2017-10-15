@@ -20,7 +20,7 @@ namespace CLTests.Utilities {
          }
 
          output.WriteLine("Dumping evaluation stack:");
-         foreach (StackItem item in ExecutionEngine.LastEvaluationStack) {
+         foreach (StackItem item in engine.EvaluationStack) {
             output.WriteLine(BitConverter.ToString(item.GetByteArray()));
          }
 

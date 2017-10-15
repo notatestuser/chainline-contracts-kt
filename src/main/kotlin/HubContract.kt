@@ -40,12 +40,9 @@ object HubContract : SmartContract() {
    // Maximum values
    private const val MAX_GAS_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
 
-   // Storage markers
-   private const val ACCOUNT_MARKER_RESERVED_FUNDS = 0x01 as Byte
-
-   // Account states
-   private const val ACCOUNT_STATE_DEMAND = 0x02 as Byte
-   private const val ACCOUNT_STATE_TRAVEL = 0x03 as Byte
+   // Fees
+   private const val FEE_DEMAND_REWARD: Long = 300000000  // 3 GAS
+   private const val FEE_TRAVEL_DEPOSIT: Long = 100000000  // 1 GAS
 
    fun Main(operation: String, vararg args: ByteArray) : Any {
       // The entry points for each of the supported operations follow
@@ -86,17 +83,17 @@ object HubContract : SmartContract() {
 
       // Can't call IsInitialized() from here 'cause the compiler don't like it
       if (Storage.get(Storage.currentContext(), "Initialized").isEmpty()) {
-         Runtime.notify("CLHubNotInitialized")
+         Runtime.notify("CL:ERR:HubNotInitialized")
          return false
       }
 
       // Operations (only when initialized)
       if (operation == "wallet_validate")
-         return wallet_validate(args[0], args[1])
+         return args[0].wallet_validate(args[1])
       if (operation == "wallet_getBalance")
-         return wallet_getBalance(args[0])
+         return args[0].wallet_getBalance()
       if (operation == "wallet_getBalanceOnHold")
-         return wallet_getBalanceOnHold(args[0])
+         return args[0].wallet_getBalanceOnHold()
 
       return false
    }
@@ -117,15 +114,15 @@ object HubContract : SmartContract() {
       Storage.put(Storage.currentContext(), "WalletScriptP2", walletScriptP2)
       Storage.put(Storage.currentContext(), "WalletScriptP3", walletScriptP3)
       Storage.put(Storage.currentContext(), "Initialized", 1 as ByteArray)
-      Runtime.notify("CLHubInitialized")
+      Runtime.notify("CL:OK:HubInitialized")
       return true
    }
 
-   // -================-
-   // -=  Operations  =-
-   // -================-
+   // -=============-
+   // -=  Wallets  =-
+   // -=============-
 
-   private fun wallet_validate(scriptHash: ScriptHash, pubKey: ByteArray): Boolean {
+   private fun ScriptHash.wallet_validate(pubKey: ByteArray): Boolean {
       val expectedScript =
             getWalletScriptP1()
                .concat(pubKey)
@@ -133,19 +130,21 @@ object HubContract : SmartContract() {
                .concat(ExecutionEngine.executingScriptHash())
                .concat(getWalletScriptP3())
       val expectedScriptHash = hash160(expectedScript)
-      if (scriptHash == expectedScriptHash) return true
-      Runtime.notify("CLWalletValidateFail", expectedScriptHash, expectedScript)
+      if (this == expectedScriptHash) return true
+      Runtime.notify("CL:ERR:WalletValidateFail", expectedScriptHash, expectedScript)
       return false
    }
 
-   private fun wallet_getBalance(scriptHash: ScriptHash): BigInteger {
-      val account = Blockchain.getAccount(scriptHash)
-      Runtime.notify("CLFoundWallet", account.scriptHash())
-      return BigInteger.valueOf(account.getBalance(getAssetId()))
+   private fun ScriptHash.wallet_getBalance(): Long {
+      val account = Blockchain.getAccount(this)
+      Runtime.notify("CL:OK:FoundWallet", account.scriptHash())
+      return account.getBalance(getAssetId())
    }
 
-   private fun wallet_getBalanceOnHold(scriptHash: ScriptHash): Long {
-      val reservations: ByteArray = Storage.get(Storage.currentContext(), scriptHash)
+   private fun ScriptHash.wallet_getBalanceOnHold(): Long {
+      // todo: validate the user's wallet
+      //if (! this.wallet_validate())
+      val reservations: ByteArray = Storage.get(Storage.currentContext(), this)
       if (reservations.isEmpty()) return 0
       val header = Blockchain.getHeader(Blockchain.height())
       return reservations_getTotalOnHoldValue(reservations, header.timestamp())
@@ -166,10 +165,10 @@ object HubContract : SmartContract() {
 
    private fun reservations_getTotalOnHoldValue(all: ByteArray, nowTime: Int): Long {
       // todo: clean up expired reservation entries
-      val count = all.size
+      val size = all.size
       var i = 0
       var total: Long = 0
-      while (i < count) {
+      while (i < size) {
          val reservation = reservations_get(all, i)
          val expiry = take(reservation, TIMESTAMP_SIZE) as Int?
          if (expiry!! > nowTime) {
@@ -216,6 +215,31 @@ object HubContract : SmartContract() {
    private fun ReservationList.res_getTotalOnHoldValue(): Long {
       val holdValue = reservations_getTotalOnHoldValue(this, 1)
       return holdValue
+   }
+
+   private fun ScriptHash.account_reserveFunds(expiry: BigInteger, value: BigInteger): Boolean {
+      val balance = this.wallet_getBalance()
+      val toReserve = value.toLong()
+      if (balance <= toReserve) {  // insufficient balance
+         Runtime.notify("CL:ERR:InsufficientFunds1")
+         return false
+      }
+      val reservations: ByteArray = Storage.get(Storage.currentContext(), this)
+      val header = Blockchain.getHeader(Blockchain.height())
+      val gasOnHold = reservations_getTotalOnHoldValue(reservations, header.timestamp())
+      if (gasOnHold < 0)  // wallet validation failed
+         return false
+      val effectiveBalance = balance - gasOnHold
+      if (effectiveBalance < toReserve) {
+         Runtime.notify("CL:ERR:InsufficientFunds2")
+         return false
+      }
+      val emptyScriptHash = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      val reservation = reservation_create(expiry, value, emptyScriptHash, false)
+      val newReservations = reservations.concat(reservation)
+      reservation.account_storeReservations(newReservations)
+      Runtime.notify("CL:OK:ReservedFunds", reservation)
+      return true
    }
 
    // -=============-
@@ -273,6 +297,11 @@ object HubContract : SmartContract() {
       return bytes
    }
 
+//   private fun Demand.demand_isMatched(): Boolean {
+//      val itemValue = this.demand_getItemValue()
+//
+//   }
+
    // -=============-
    // -=  Travel   =-
    // -=============-
@@ -283,14 +312,14 @@ object HubContract : SmartContract() {
    //   - departure (expiry) time (kept in state, see ScriptHash.account_storeState)
    //   - minimum reputation requirement
    //   - carry space available
-   private fun travel_create(pickupCityHash: Hash160, destCityHash: Hash160,
+   private fun travel_create(pickupCityHash: Hash160, dropOffCityHash: Hash160,
                              repRequired: BigInteger, carrySpace: BigInteger): Travel {
       val nil = byteArrayOf()
       val expectedSize =
             20 + 20 + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE
       // size: 43 bytes
       val reservation = pickupCityHash
-            .concat(destCityHash)
+            .concat(dropOffCityHash)
             .concat(repRequired.toByteArray(REP_REQUIRED_SIZE))
             .concat(carrySpace.toByteArray(CARRY_SPACE_SIZE))
       if (reservation.size != expectedSize)
@@ -303,7 +332,7 @@ object HubContract : SmartContract() {
       return bytes
    }
 
-   private fun Travel.travel_getDestCityHash(): Hash160 {
+   private fun Travel.travel_getDropOffCityHash(): Hash160 {
       val bytes = this.range(20, 20)
       return bytes
    }
@@ -323,7 +352,11 @@ object HubContract : SmartContract() {
    // -=============-
 
    private fun getAssetId(): ByteArray {
-      return Storage.get(Storage.currentContext(), "AssetID")
+      //return Storage.get(Storage.currentContext(), "AssetID")
+      val gasAssetId = byteArrayOf(96, 44, 121, 113, 139 as Byte, 22, 228 as Byte, 66, 222 as Byte, 88,
+         119, 142 as Byte, 20, 141 as Byte, 11, 16, 132 as Byte, 227 as Byte, 178 as Byte, 223 as Byte,
+         253 as Byte, 93, 230 as Byte, 183 as Byte, 177 as Byte, 108, 238 as Byte, 121, 105, 40, 45, 231 as Byte)
+      return gasAssetId
    }
 
    private fun getWalletScriptP1(): ByteArray {
@@ -338,44 +371,73 @@ object HubContract : SmartContract() {
       return Storage.get(Storage.currentContext(), "WalletScriptP3")
    }
 
-   private fun ScriptHash.account_storeState(marker: ByteArray, expiry: BigInteger) {
-      val state =  expiry.toByteArray(TIMESTAMP_SIZE).concat(marker)
-      Storage.put(Storage.currentContext(), this, state)
+   private fun ScriptHash.account_getReservations(): ByteArray {
+      val reservations = Storage.get(Storage.currentContext(), this)
+      return reservations
    }
 
-   private fun ScriptHash.account_storeReservation(res: Reservation) {
-      val marker = byteArrayOf(ACCOUNT_MARKER_RESERVED_FUNDS)
-      val key = this.concat(marker)
-      Storage.put(Storage.currentContext(), key, res)
+   private fun ScriptHash.account_storeReservations(resList: ReservationList) {
+      Storage.put(Storage.currentContext(), this, resList)
    }
 
    private fun ScriptHash.account_storeDemand(demand: Demand, expiry: BigInteger) {
-      val demandStateMarker = byteArrayOf(ACCOUNT_STATE_DEMAND)
       if (this.account_isInNullState()) {
-         val key = this.concat(demandStateMarker)
-         Storage.put(Storage.currentContext(), key, demand)
-         this.account_storeState(demandStateMarker, expiry)
+         Runtime.notify("CL:DBG:StoringDemand")
+
+         // store the demand object
+         val cityHash = demand.demand_getCityHash()
+         val demandsForCity = Storage.get(Storage.currentContext(), cityHash)
+         val newDemandsForCity = demandsForCity.concat(demand)
+         Storage.put(Storage.currentContext(), cityHash, newDemandsForCity)
+
+         Runtime.notify("CL:OK:StoredDemand", cityHash)
+
+         val itemValue = demand.demand_getItemValue()
+         val toReserve = itemValue.toLong() + FEE_DEMAND_REWARD
+         this.account_reserveFunds(expiry, BigInteger.valueOf(toReserve))
+
+         Runtime.notify("CL:OK:ReservedDemandValueAndFee")
       }
    }
 
    private fun ScriptHash.account_storeTravel(travel: Travel, expiry: BigInteger) {
-      val travelStateMarker = byteArrayOf(ACCOUNT_STATE_TRAVEL)
       if (this.account_isInNullState()) {
-         val key = this.concat(travelStateMarker)
-         Storage.put(Storage.currentContext(), key, travel)
-         this.account_storeState(travelStateMarker, expiry)
+         Runtime.notify("CL:DBG:StoringTravel")
+
+         // store the travel object
+         val pickupCityHash = travel.travel_getPickupCityHash()
+         val dropOffCityHash = travel.travel_getDropOffCityHash()
+         val cityHashPair = pickupCityHash.concat(dropOffCityHash)
+         val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPair)
+         val newTravelsForCityPair = travelsForCityPair.concat(travel)
+         Storage.put(Storage.currentContext(), cityHashPair, newTravelsForCityPair)
+
+         Runtime.notify("CL:OK:StoredTravel", cityHashPair)
+
+         // reserve the security deposit
+         this.account_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT))
+
+         Runtime.notify("CL:OK:ReservedTravelDeposit", cityHashPair)
       }
    }
 
-   private fun ScriptHash.account_isInNullState(): Boolean {
-      val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-      val state = Storage.get(Storage.currentContext(), this)
-      if (state.isEmpty())
+   private fun ScriptHash.account_isInNullState(nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp()): Boolean {
+      // checking active reservations tells us what state the account is in
+      val reservations = Storage.get(Storage.currentContext(), this)
+      if (reservations.isEmpty())
          return true
-      val expiry = take(state, TIMESTAMP_SIZE) as Int?
-      if (expiry!! > nowTime)
-         return true
-      return false
+      val size = reservations.size
+      var i = 0
+      while (i < size) {
+         val reservation = reservations_get(reservations, i)
+         val expiry = take(reservation, TIMESTAMP_SIZE) as Int?
+         val value = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE) as BigInteger?
+         if (expiry!! > nowTime && value!!.toLong() > 0) {
+            return false
+         }
+         i++
+      }
+      return true
    }
 
    // -================-

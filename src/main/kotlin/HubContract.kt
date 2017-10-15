@@ -400,9 +400,10 @@ object HubContract : SmartContract() {
 
    private fun getAssetId(): ByteArray {
       //return Storage.get(Storage.currentContext(), "AssetID")
-      val gasAssetId = byteArrayOf(96, 44, 121, 113, 139 as Byte, 22, 228 as Byte, 66, 222 as Byte, 88,
-         119, 142 as Byte, 20, 141 as Byte, 11, 16, 132 as Byte, 227 as Byte, 178 as Byte, 223 as Byte,
-         253 as Byte, 93, 230 as Byte, 183 as Byte, 177 as Byte, 108, 238 as Byte, 121, 105, 40, 45, 231 as Byte)
+      // now reversed. see: https://git.io/vdM02
+      val gasAssetId = byteArrayOf(231 as Byte, 45, 40, 105, 121, 238 as Byte, 108, 177 as Byte, 3, 230 as Byte, 93,
+         253 as Byte, 223 as Byte, 178 as Byte, 227 as Byte, 132 as Byte, 16, 11, 141 as Byte, 20, 142 as Byte, 119,
+         88, 222 as Byte, 66, 228 as Byte, 22, 139 as Byte, 113, 121, 44, 96)
       return gasAssetId
    }
 

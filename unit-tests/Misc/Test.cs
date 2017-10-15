@@ -6,15 +6,17 @@ namespace CLTests {
    public abstract class Test {
       public ITestOutputHelper output { private set; get; }
       public ExecutionHelper executionHelper { private set; get; }
+      public InteropService interopService { private set; get; }
 
       public Test(ITestOutputHelper output) {
          this.output = output;
          this.executionHelper = new ExecutionHelper(output);
+         this.interopService = new StateReader(output);
       }
 
       protected ExecutionEngine LoadContract(string contractName) {
          byte[] program = executionHelper.Compile(contractName);
-         var engine = new ExecutionEngine(null, new Crypto());
+         var engine = new ExecutionEngine(null, new Crypto(), null, interopService);
          engine.LoadScript(program);
          return engine;
       }

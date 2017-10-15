@@ -259,6 +259,7 @@ object HubContract : SmartContract() {
    //   - carry space required (sm, md, lg) (1, 2, 3)
    private fun demand_create(cityHash: Hash160, repRequired: BigInteger, itemSize: BigInteger,
                              itemValue: BigInteger, infoBlob: ByteArray): Demand {
+      Runtime.notify("CL:DBG:CreatingDemand")
       // checking individual arg lengths doesn't seem to work here
       // I tried a lot of things, grr compiler
       val nil = byteArrayOf()
@@ -274,6 +275,7 @@ object HubContract : SmartContract() {
             .concat(infoBlob)
       if (demand.size != expectedSize)
          return nil
+      Runtime.notify("CL:OK:DemandCreated")
       return demand
    }
 
@@ -302,6 +304,7 @@ object HubContract : SmartContract() {
    }
 
    private fun Demand.demand_isMatched(nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp()): Boolean {
+      Runtime.notify("CL:DBG:Demand.isMatched")
       val emptyScriptHash = getEmptyScriptHash()
       val itemValue = this.demand_getItemValue()
       val reservations = this.account_getReservations()
@@ -340,6 +343,7 @@ object HubContract : SmartContract() {
    //   - demand matched with (script hash)
    private fun travel_create(pickupCityHash: Hash160, dropOffCityHash: Hash160,
                              repRequired: BigInteger, carrySpace: BigInteger): Travel {
+      Runtime.notify("CL:DBG:CreatingTravel")
       val nil = byteArrayOf()
       val emptyScriptHash = getEmptyScriptHash()
       val expectedSize =
@@ -352,6 +356,7 @@ object HubContract : SmartContract() {
             .concat(emptyScriptHash)
       if (reservation.size != expectedSize)
          return nil
+      Runtime.notify("CL:OK:TravelCreated")
       return reservation
    }
 
@@ -381,6 +386,7 @@ object HubContract : SmartContract() {
    }
 
    private fun Travel.travel_isMatched(): Boolean {
+      Runtime.notify("CL:DBG:Travel.isMatched")
       val emptyScriptHash = getEmptyScriptHash()
       val matchScriptHash = this.travel_getMatchScriptHash()
       if (matchScriptHash != emptyScriptHash)
@@ -422,6 +428,7 @@ object HubContract : SmartContract() {
    }
 
    private fun ScriptHash.account_storeDemand(demand: Demand, expiry: BigInteger) {
+      Runtime.notify("CL:DBG:storeDemand")
       if (this.account_isInNullState()) {
          Runtime.notify("CL:DBG:StoringDemand")
 
@@ -442,6 +449,7 @@ object HubContract : SmartContract() {
    }
 
    private fun ScriptHash.account_storeTravel(travel: Travel, expiry: BigInteger) {
+      Runtime.notify("CL:DBG:storeTravel")
       if (this.account_isInNullState()) {
          Runtime.notify("CL:DBG:StoringTravel")
 

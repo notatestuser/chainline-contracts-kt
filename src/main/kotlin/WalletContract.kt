@@ -1,7 +1,8 @@
 package chainline.contracts
 
-import java.lang.StringBuilder
-import org.neo.smartcontract.framework.SmartContract
+import org.neo.smartcontract.framework.*
+import org.neo.smartcontract.framework.services.neo.*
+import org.neo.smartcontract.framework.services.system.ExecutionEngine
 
 //                     __ __
 //               __ __|__|__|__ __
@@ -12,39 +13,51 @@ import org.neo.smartcontract.framework.SmartContract
 //       C  H  A  I  N     L  I  N  E
 
 object WalletContract : SmartContract() {
-   // public key
-   // converter: https://conv.darkbyte.ru/
 
+	@Appcall("30a2b04139d714564eb956896498616cf8acc8db")
+	private external fun HubContract(operation: String, vararg args: Any): Boolean
 
-   fun Main(operation: String, arg0: ByteArray, arg1: ByteArray) : Any? {
-      if (operation == "rev") return ReverseArray(arg0 as String)
-      if (operation == "arrayeq") return arg0 == arg1
-      if (operation == "arrayneq") return arg0 != arg1
-      return false
-   }
+   fun Main(signature: ByteArray): Boolean {
+      // The account owner's public key
+      // Included in at wallet creation time
+      // Converter: https://conv.darkbyte.ru
+      val ownerPubKey = byteArrayOf(
+         3, 114, 247 as Byte, 98, 137 as Byte, 198 as Byte, 155 as Byte, 181 as Byte, 138 as Byte, 142 as Byte, 92, 125, 43, 79,
+         21, 38, 234 as Byte, 139 as Byte, 38, 192 as Byte, 131 as Byte, 178 as Byte, 169 as Byte, 88, 194 as Byte, 30, 188 as Byte,
+         3, 25, 110, 0, 188 as Byte, 192 as Byte)
 
-   private fun ReverseArray(input: String): ByteArray? {
-      val sb = StringBuilder()
-      sb.append(input[19])
-      sb.append(input[18])
-      sb.append(input[17])
-      sb.append(input[16])
-      sb.append(input[15])
-      sb.append(input[14])
-      sb.append(input[13])
-      sb.append(input[12])
-      sb.append(input[11])
-      sb.append(input[10])
-      sb.append(input[9])
-      sb.append(input[8])
-      sb.append(input[7])
-      sb.append(input[6])
-      sb.append(input[5])
-      sb.append(input[4])
-      sb.append(input[3])
-      sb.append(input[2])
-      sb.append(input[1])
-      sb.append(input[0])
-      return sb.toString() as ByteArray?
+      // GAS asset ID
+      // 602c79718b16e442de58778e148d0b1084e3b2dffd5de6b7b16cee7969282de7
+      val gasAssetId = byteArrayOf(
+         231 as Byte, 45, 40, 105, 121, 238 as Byte, 108, 177 as Byte, 3, 230 as Byte, 93,
+         253 as Byte, 223 as Byte, 178 as Byte, 227 as Byte, 132 as Byte, 16, 11, 141 as Byte,
+         20, 142 as Byte, 119, 88, 222 as Byte, 66, 228 as Byte, 22, 139 as Byte, 113, 121, 44, 96)
+
+      // Ensure that we're processing a withdrawal
+      if (Runtime.trigger() != TriggerType.Verification)
+         return false
+
+      // Verify the tx against the wallet owner's pubkey
+      if (!verifySignature(signature, ownerPubKey))
+         return false
+
+      // Check that the assetId is GAS
+      val tx = ExecutionEngine.scriptContainer() as Transaction?
+      val reference = tx!!.references()[0]
+      val assetId = reference.assetId()
+      if (assetId != gasAssetId)
+         return false
+
+      // Get the tx amount (count the gas in outputs)
+      val executingScriptHash = ExecutionEngine.executingScriptHash()
+      val outputs = tx!!.outputs()
+      var outputsValue: Long = 0
+      outputs.forEach {
+         if (it.scriptHash() == executingScriptHash)
+            outputsValue += it.value()
+      }
+
+      val result = HubContract("wallet_requestTx", signature, ownerPubKey, assetId, outputsValue)
+      return result
    }
 }

@@ -1,11 +1,9 @@
 package chainline.contracts
 
 import java.math.BigInteger
-import org.neo.smartcontract.framework.Helper.*
 import org.neo.smartcontract.framework.SmartContract
-import org.neo.smartcontract.framework.services.neo.Blockchain
-import org.neo.smartcontract.framework.services.neo.Runtime
-import org.neo.smartcontract.framework.services.neo.Storage
+import org.neo.smartcontract.framework.Helper.*
+import org.neo.smartcontract.framework.services.neo.*
 import org.neo.smartcontract.framework.services.system.ExecutionEngine
 
 //                     __ __

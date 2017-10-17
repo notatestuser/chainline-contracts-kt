@@ -15,8 +15,9 @@ import org.neo.smartcontract.framework.services.system.ExecutionEngine
 // ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 //       C  H  A  I  N     L  I  N  E
 
-typealias Hash160 = ByteArray
 typealias ScriptHash = ByteArray
+typealias Hash160 = ByteArray
+typealias Hash160Pair = ByteArray
 typealias Reservation = ByteArray
 typealias ReservationList = ByteArray
 typealias Demand = ByteArray
@@ -282,12 +283,9 @@ object HubContract : SmartContract() {
       if (owner.account_isInNullState()) {
          Runtime.notify("CL:DBG:StoringDemand")
 
-         val demandStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_DEMAND)
-         val travelStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_TRAVEL)
-
          // store the demand object
          val cityHashPair = pickUpCityHash.concat(dropOffCityHash)
-         val cityHashPairKeyD = cityHashPair.concat(demandStorageKeySuffix)
+         val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
          val demandsForCity = Storage.get(Storage.currentContext(), cityHashPairKeyD)
          val newDemandsForCity = demandsForCity.concat(this)
          Storage.put(Storage.currentContext(), cityHashPairKeyD, newDemandsForCity)
@@ -301,8 +299,8 @@ object HubContract : SmartContract() {
 
          Runtime.notify("CL:OK:ReservedDemandValueAndFee")
 
-         // match the demand with a travel object
-         val cityHashPairKeyT = cityHashPair.concat(travelStorageKeySuffix)
+         // find a travel object to match this demand with
+         val cityHashPairKeyT = cityHashPair.travel_getStorageKey()
          val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyT)
          if (!travelsForCityPair.isEmpty()) {
             val matchKey = this.demand_getMatchKey()
@@ -344,6 +342,12 @@ object HubContract : SmartContract() {
 
    private fun Demand.demand_getInfoBlob(): ByteArray {
       return this.range(TIMESTAMP_SIZE + VALUE_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, DEMAND_INFO_SIZE)
+   }
+
+   private fun Hash160Pair.demand_getStorageKey(): ByteArray {
+      val demandStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_DEMAND)
+      val cityHashPairKey = this.concat(demandStorageKeySuffix)
+      return cityHashPairKey
    }
 
    private fun Demand.demand_getMatchKey(): ByteArray {
@@ -411,12 +415,9 @@ object HubContract : SmartContract() {
       if (owner.account_isInNullState()) {
          Runtime.notify("CL:DBG:StoringTravel")
 
-         val demandStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_DEMAND)
-         val travelStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_TRAVEL)
-
          // store the travel object
          val cityHashPair = pickUpCityHash.concat(dropOffCityHash)
-         val cityHashPairKey = cityHashPair.concat(travelStorageKeySuffix)
+         val cityHashPairKey = cityHashPair.travel_getStorageKey()
          val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKey)
          val newTravelsForCityPair = travelsForCityPair.concat(this)
          Storage.put(Storage.currentContext(), cityHashPairKey, newTravelsForCityPair)
@@ -429,8 +430,8 @@ object HubContract : SmartContract() {
 
          Runtime.notify("CL:OK:ReservedTravelDeposit", cityHashPair)
 
-         // match the travel object with a demand
-         val cityHashPairKeyD = cityHashPair.concat(demandStorageKeySuffix)
+         // find a demand object to match this travel with
+         val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
          val demandsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyD)
          if (!demandsForCityPair.isEmpty()) {
             val matchKey = this.travel_getMatchKey()
@@ -463,6 +464,12 @@ object HubContract : SmartContract() {
    private fun Travel.travel_getCarrySpace(): BigInteger {
       val bytes = this.range(TIMESTAMP_SIZE + REP_REQUIRED_SIZE, CARRY_SPACE_SIZE)
       return BigInteger(bytes)
+   }
+
+   private fun Hash160Pair.travel_getStorageKey(): ByteArray {
+      val travelStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_TRAVEL)
+      val cityHashPairKey = this.concat(travelStorageKeySuffix)
+      return cityHashPairKey
    }
 
    private fun Travel.travel_getMatchKey(): ByteArray {

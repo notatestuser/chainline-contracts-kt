@@ -10,8 +10,8 @@
    <version>1.0</version>
 
    <properties>
-      <kotlin.version>1.1.4</kotlin.version>
-      <kotlin.compiler.jvmTarget>1.6</kotlin.compiler.jvmTarget>
+      <kotlin.version>1.1.51</kotlin.version>
+      <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
       <junit.version>4.12</junit.version>
       <main.class>chainline.contracts.HubContract</main.class>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>

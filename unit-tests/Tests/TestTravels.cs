@@ -14,9 +14,10 @@ namespace CLTests {
          //                            repRequired: BigInteger, carrySpace: BigInteger): Travel {
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(2);  // args[1] - carrySpace
-            sb.EmitPush(1);  // args[0] - repRequired
-            sb.EmitPush(2);
+            sb.EmitPush(2);  // args[2] - carrySpace
+            sb.EmitPush(1);  // args[1] - repRequired
+            sb.EmitPush(1);  // args[0] - expiry
+            sb.EmitPush(3);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_travel_create");  // operation
             ExecuteScript(engine, sb);
@@ -25,13 +26,12 @@ namespace CLTests {
          var result = engine.EvaluationStack.Peek().GetByteArray();
 
          var expected = new byte[] {
+            // expiry (4 byte timestamp)
+            1, 0, 0, 0,
             // repRequired
             1, 0,
             // carrySpace
             2,
-            // matchScriptHash
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
          };
 
          Assert.Equal(expected, result);
@@ -46,7 +46,8 @@ namespace CLTests {
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(128);  // args[1] - carrySpace
             sb.EmitPush(1);  // args[0] - repRequired
-            sb.EmitPush(2);
+            sb.EmitPush(1);  // args[0] - expiry
+            sb.EmitPush(3);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_travel_create");  // operation
             ExecuteScript(engine, sb);
@@ -61,13 +62,12 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          var travel = new byte[] {
+            // expiry (4 byte timestamp)
+            1, 0, 0, 0,
             // repRequired
             1, 0,
             // carrySpace
             2,
-            // matchScriptHash
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0,
-            0, 0, 0, 0, 0, 0, 0, 0, 0, 0
          };
 
          using (ScriptBuilder sb = new ScriptBuilder()) {

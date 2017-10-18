@@ -1,8 +1,7 @@
 package chainline.contracts
 
-import chainline.contracts.HubContract.demand_store
 import java.math.BigInteger
-import org.neo.smartcontract.framework.SmartContract
+import org.neo.smartcontract.framework.*
 import org.neo.smartcontract.framework.Helper.*
 import org.neo.smartcontract.framework.services.neo.*
 import org.neo.smartcontract.framework.services.system.ExecutionEngine
@@ -198,6 +197,40 @@ object HubContract : SmartContract() {
       return this.range(index * RESERVATION_SIZE, RESERVATION_SIZE)
    }
 
+   private fun ReservationList.res_findBy(expiry: BigInteger, value: BigInteger): Int {
+      if (this.isEmpty())
+         return 0
+      val count = this.size / RESERVATION_SIZE
+      var i = 0
+      while (i < count) {
+         val reservation = this.res_getAt(i)
+         val expiryBytes = take(reservation, TIMESTAMP_SIZE)
+         val expiryFound = BigInteger(expiryBytes)
+         if (expiry == expiryFound) {
+            val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
+            val valueFound = BigInteger(valueBytes)
+            if (value == valueFound)
+               return i
+         }
+         i++
+      }
+      return -1
+   }
+
+   private fun ReservationList.res_replaceRecipientAt(idx: Int, recipient: ScriptHash): ReservationList {
+      val falseBytes = byteArrayOf(0)
+      val items = this.size / RESERVATION_SIZE
+      val skipCount = idx * RESERVATION_SIZE
+      val before = range(this, 0, skipCount + TIMESTAMP_SIZE + VALUE_SIZE)
+      val restCount = skipCount + SCRIPT_HASH_SIZE + 1
+      val after = range(restCount, this.size - restCount)
+      val newList = before
+            .concat(recipient)
+            .concat(falseBytes)
+            .concat(after)
+      return newList
+   }
+
    private fun Reservation.res_getExpiry(): BigInteger {
       val expiryBytes = this.take(TIMESTAMP_SIZE)
       return BigInteger(expiryBytes)
@@ -248,8 +281,8 @@ object HubContract : SmartContract() {
       return true
    }
 
-   // argh, the compiler strikes again
    private fun ScriptHash.account_reserveFunds(expiry: BigInteger, value: BigInteger): Boolean {
+      // argh, the compiler strikes again
       val emptyScriptHash = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
       val ret = this.account_reserveFunds(expiry, value, emptyScriptHash)
       return ret
@@ -504,14 +537,25 @@ object HubContract : SmartContract() {
                Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
 
                Runtime.notify("CL:OK:MatchedTravelWithDemand")
+
+               // rewrite the reservation that was created with the matched demand
+               // this means that we inject the traveller's script hash as the "recipient" of the reserved funds
+               // when a transaction to withdraw the funds is received (multi-sig) the destination wallet must match this one
+               val demandOwner = matchedDemand.demand_getOwnerScriptHash()
+               val demandValue = matchedDemand.demand_getItemValue()
+               val demandExpiry = matchedDemand.demand_getExpiry()
+               val ownerReservationList = demandOwner.account_getReservations()
+               val reservationAtIdx = ownerReservationList.res_findBy(demandExpiry, demandValue)
+               val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
+               demandOwner.account_storeReservations(rewrittenReservationList)
+
+               Runtime.notify("CL:OK:RewroteDemandFundsReservation")
             } else {
                Runtime.notify("CL:DBG:NoMatchableDemandForTravel:1")
             }
          } else {
             Runtime.notify("CL:DBG:NoMatchableDemandForTravel:2")
          }
-
-         // todo: set target script hash in funds reserved for demand, could get ugly
 
          Runtime.notify("CL:RET:Travel.store")
       }

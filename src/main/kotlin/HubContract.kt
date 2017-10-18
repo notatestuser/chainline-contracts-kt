@@ -38,8 +38,10 @@ object HubContract : SmartContract() {
    private const val REP_REQUIRED_SIZE = 2
    private const val CARRY_SPACE_SIZE = 1
    private const val DEMAND_INFO_SIZE = 128
-   private const val DEMAND_SIZE = TIMESTAMP_SIZE + VALUE_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + DEMAND_INFO_SIZE
-   private const val TRAVEL_SIZE = TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE
+   private const val DEMAND_SIZE =
+         TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + DEMAND_INFO_SIZE
+   private const val TRAVEL_SIZE =
+         TIMESTAMP_SIZE + SCRIPT_HASH_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE
 
    // Maximum values
    private const val MAX_GAS_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
@@ -66,9 +68,9 @@ object HubContract : SmartContract() {
          if (operation == "test_reservation_create")
             return reservation_create(BigInteger(args[0]), BigInteger(args[1]), args[2])
          if (operation == "test_demand_create")
-            return demand_create(BigInteger(args[0]), BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), args[4])
+            return demand_create(BigInteger(args[0]), BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), args[4], args[5])
          if (operation == "test_travel_create")
-            return travel_create(BigInteger(args[0]), BigInteger(args[1]), BigInteger(args[2]))
+            return travel_create(BigInteger(args[0]), BigInteger(args[1]), BigInteger(args[2]), args[3])
          if (operation == "test_reservation_getExpiry")
             return args[0].res_getExpiry()
          if (operation == "test_reservation_getValue")
@@ -161,10 +163,6 @@ object HubContract : SmartContract() {
    // -=  Reservations  =-
    // -==================-
 
-   private fun reservations_get(all: ReservationList, index: Int): Reservation {
-      return all.range(index * RESERVATION_SIZE, RESERVATION_SIZE)
-   }
-
    private fun reservations_getTotalOnHoldValue(all: ReservationList, nowTime: Int): Long {
       // todo: clean up expired reservation entries
       if (all.isEmpty())
@@ -173,7 +171,7 @@ object HubContract : SmartContract() {
       var i = 0
       var total: Long = 0
       while (i < count) {
-         val reservation = reservations_get(all, i)
+         val reservation = all.res_getAt(i)
          val expiryBytes = take(reservation, TIMESTAMP_SIZE)
          val expiry = BigInteger(expiryBytes)
          if (expiry.toInt() > nowTime) {
@@ -194,6 +192,10 @@ object HubContract : SmartContract() {
             .concat(destination)  // script hash, 20 bytes
             .concat(falseBytes)  // 1 byte
       return reservation
+   }
+
+   private fun ReservationList.res_getAt(index: Int): Reservation {
+      return this.range(index * RESERVATION_SIZE, RESERVATION_SIZE)
    }
 
    private fun Reservation.res_getExpiry(): BigInteger {
@@ -222,7 +224,7 @@ object HubContract : SmartContract() {
       return holdValue
    }
 
-   private fun ScriptHash.account_reserveFunds(expiry: BigInteger, value: BigInteger): Boolean {
+   private fun ScriptHash.account_reserveFunds(expiry: BigInteger, value: BigInteger, recipient: ScriptHash): Boolean {
       val balance = this.wallet_getBalance()
       val toReserve = value.toLong()
       if (balance <= toReserve) {  // insufficient balance
@@ -239,12 +241,18 @@ object HubContract : SmartContract() {
          Runtime.notify("CL:ERR:InsufficientFunds2")
          return false
       }
-      val emptyScriptHash = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-      val reservation = reservation_create(expiry, value, emptyScriptHash)
+      val reservation = reservation_create(expiry, value, recipient)
       val newReservations = reservations.concat(reservation)
       reservation.account_storeReservations(newReservations)
       Runtime.notify("CL:OK:ReservedFunds", reservation)
       return true
+   }
+
+   // argh, the compiler strikes again
+   private fun ScriptHash.account_reserveFunds(expiry: BigInteger, value: BigInteger): Boolean {
+      val emptyScriptHash = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
+      val ret = this.account_reserveFunds(expiry, value, emptyScriptHash)
+      return ret
    }
 
    // -=============-
@@ -258,17 +266,18 @@ object HubContract : SmartContract() {
    //   - minimum reputation requirement
    //   - carry space required (sm, md, lg) (1, 2, 3)
    private fun demand_create(expiry: BigInteger, repRequired: BigInteger, itemSize: BigInteger, itemValue: BigInteger,
-                             infoBlob: ByteArray): Demand {
+                             ownerScriptHash: ScriptHash, infoBlob: ByteArray): Demand {
       Runtime.notify("CL:DBG:CreatingDemand")
       // checking individual arg lengths doesn't seem to work here
       // I tried a lot of things, grr compiler
       val nil = byteArrayOf()
       if (itemValue.toLong() > MAX_GAS_VALUE)
          return nil
-      // size: 140 bytes
+      // size: 160 bytes
       val expectedSize = DEMAND_SIZE
       val demand = expiry.toByteArray(TIMESTAMP_SIZE)
             .concat(itemValue.toByteArray(VALUE_SIZE))
+            .concat(ownerScriptHash)
             .concat(repRequired.toByteArray(REP_REQUIRED_SIZE))
             .concat(itemSize.toByteArray(CARRY_SPACE_SIZE))
             .concat(infoBlob)
@@ -279,7 +288,7 @@ object HubContract : SmartContract() {
    }
 
    private fun Demand.demand_store(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160) {
-      Runtime.notify("CL:DBG:storeDemand")
+      Runtime.notify("CL:DBG:Demand.store")
       if (owner.account_isInNullState()) {
          Runtime.notify("CL:DBG:StoringDemand")
 
@@ -289,35 +298,76 @@ object HubContract : SmartContract() {
          val demandsForCity = Storage.get(Storage.currentContext(), cityHashPairKeyD)
          val newDemandsForCity = demandsForCity.concat(this)
          Storage.put(Storage.currentContext(), cityHashPairKeyD, newDemandsForCity)
-
          Runtime.notify("CL:OK:StoredDemand", cityHashPair)
-
-         val expiry = this.demand_getExpiry()
-         val itemValue = this.demand_getItemValue()
-         val toReserve = itemValue.toLong() + FEE_DEMAND_REWARD
-         owner.account_reserveFunds(expiry, BigInteger.valueOf(toReserve))
-
-         Runtime.notify("CL:OK:ReservedDemandValueAndFee")
 
          // find a travel object to match this demand with
          val cityHashPairKeyT = cityHashPair.travel_getStorageKey()
          val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyT)
+
+         // no travels available! no match can be made yet
+         if (travelsForCityPair.isEmpty()) {
+            Runtime.notify("CL:DBG:NoMatchableTravelForDemand:1")
+            // reserve the item's value and fee (no match yet, reserve for later)
+            this.demand_reserveValueAndFee(owner)
+            Runtime.notify("CL:OK:ReservedDemandValueAndFee:1")
+         }
+
+         // random compiler errors made the below messy and split this if. it's not my fault :)
+         // we have matches! walk through the travels, find one that is appropriate to match
          if (!travelsForCityPair.isEmpty()) {
             val matchKey = this.demand_getMatchKey()
             val repRequired = this.demand_getRepRequired()
             val carrySpaceRequired = this.demand_getItemSize()
             val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-            val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
-            val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
             val matchedTravel = travelsForCityPair.travels_findMatchableTravel(repRequired, carrySpaceRequired, nowTime)
-            val timestampedMatch = nowTimeBytes.concat(matchedTravel)
-            Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
+            if (matchedTravel.isEmpty()) {  // no match
+               Runtime.notify("CL:DBG:NoMatchableTravelForDemand:2")
+               // reserve the item's value and fee (no match yet, reserve for later)
+               this.demand_reserveValueAndFee(owner)
+               Runtime.notify("CL:OK:ReservedDemandValueAndFee:2")
+            } else {
+               // match demand -> travel
+               val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
+               val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
+               val timestampedMatch = matchedTravel.concat(nowTimeBytes)
+               Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
 
-            Runtime.notify("CL:OK:MatchedDemandWithTravel")
+               // match travel -> demand
+               val otherMatchKey = matchedTravel.travel_getMatchKey()
+               val timestampedOtherMatch = this.concat(nowTimeBytes)
+               Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
+
+               Runtime.notify("CL:OK:MatchedDemandWithTravel")
+
+               // reserve the item's value and fee
+               // since we found a matchable travel we can set the recipient script hash in the reservation
+               this.demand_reserveValueAndFee(owner, matchedTravel)
+
+               Runtime.notify("CL:OK:ReservedDemandValueAndFee:3")
+            }
          }
 
-         Runtime.notify("CL:DBG:Demand.store")
+         Runtime.notify("CL:RET:Demand.store")
       }
+   }
+
+   private fun DemandList.demands_getAt(index: Int): Travel {
+      return this.range(index * DEMAND_SIZE, DEMAND_SIZE)
+   }
+
+   private fun Demand.demand_reserveValueAndFee(owner: ScriptHash, matchedTravel: Travel) {
+      val expiry = this.demand_getExpiry()
+      val itemValue = this.demand_getItemValue().toLong()
+      val toReserve = itemValue + FEE_DEMAND_REWARD
+      val travellerScriptHash = matchedTravel.travel_getOwnerScriptHash()
+      owner.account_reserveFunds(expiry, BigInteger.valueOf(toReserve), travellerScriptHash)
+   }
+
+   private fun Demand.demand_reserveValueAndFee(owner: ScriptHash) {
+      val expiry = this.demand_getExpiry()
+      val itemValue = this.demand_getItemValue().toLong()
+      val toReserve = itemValue + FEE_DEMAND_REWARD
+      owner.account_reserveFunds(expiry, BigInteger.valueOf(toReserve))
    }
 
    private fun Demand.demand_getExpiry(): BigInteger {
@@ -330,18 +380,23 @@ object HubContract : SmartContract() {
       return BigInteger(bytes)
    }
 
+   private fun Demand.demand_getOwnerScriptHash(): ScriptHash {
+      val bytes = this.range(TIMESTAMP_SIZE + VALUE_SIZE, SCRIPT_HASH_SIZE)
+      return bytes
+   }
+
    private fun Demand.demand_getRepRequired(): BigInteger {
-      val bytes = this.range(TIMESTAMP_SIZE + VALUE_SIZE, REP_REQUIRED_SIZE)
+      val bytes = this.range(TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE, REP_REQUIRED_SIZE)
       return BigInteger(bytes)
    }
 
    private fun Demand.demand_getItemSize(): BigInteger {
-      val bytes = this.range(TIMESTAMP_SIZE + VALUE_SIZE + REP_REQUIRED_SIZE, CARRY_SPACE_SIZE)
+      val bytes = this.range(TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE + REP_REQUIRED_SIZE, CARRY_SPACE_SIZE)
       return BigInteger(bytes)
    }
 
    private fun Demand.demand_getInfoBlob(): ByteArray {
-      return this.range(TIMESTAMP_SIZE + VALUE_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, DEMAND_INFO_SIZE)
+      return this.range(TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, DEMAND_INFO_SIZE)
    }
 
    private fun Hash160Pair.demand_getStorageKey(): ByteArray {
@@ -362,10 +417,6 @@ object HubContract : SmartContract() {
       return !match.isEmpty()
    }
 
-   private fun DemandList.demands_getAt(index: Int): Travel {
-      return this.range(index * DEMAND_SIZE, DEMAND_SIZE)
-   }
-
    private fun DemandList.demands_findMatchableDemand(repRequired: BigInteger, carrySpaceAvailable: BigInteger,
                                                       nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp()): Demand {
       val nil = byteArrayOf()
@@ -380,7 +431,7 @@ object HubContract : SmartContract() {
          val itemSize = demand.demand_getItemSize()
          if (expiry.toInt() > nowTime &&
                carrySpaceAvailable >= itemSize &&
-               !demand.demand_isMatched())
+               ! demand.demand_isMatched())
             return demand
          i++
       }
@@ -393,17 +444,18 @@ object HubContract : SmartContract() {
 
    //   travel details:
    //   - pickup and destination cities (hashed) (kept in storage key)
-   //   - departure (expiry) time (kept in state, see ScriptHash.account_storeState)
+   //   - departure (expiry) time
    //   - minimum reputation requirement
    //   - carry space available
-   //   - demand matched with (script hash)
-   private fun travel_create(expiry: BigInteger, repRequired: BigInteger, carrySpace: BigInteger): Travel {
+   //   - the traveller's wallet script hash (for receiving funds held in the demand)
+   private fun travel_create(expiry: BigInteger, repRequired: BigInteger, carrySpace: BigInteger, owner: ScriptHash): Travel {
       Runtime.notify("CL:DBG:CreatingTravel")
       val nil = byteArrayOf()
-      // size: 7 bytes
+      // size: 27 bytes
       val travel = expiry.toByteArray(TIMESTAMP_SIZE)
             .concat(repRequired.toByteArray(REP_REQUIRED_SIZE))
             .concat(carrySpace.toByteArray(CARRY_SPACE_SIZE))
+            .concat(owner)
       if (travel.size != TRAVEL_SIZE)
          return nil
       Runtime.notify("CL:OK:TravelCreated")
@@ -411,7 +463,7 @@ object HubContract : SmartContract() {
    }
 
    private fun Travel.travel_store(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160) {
-      Runtime.notify("CL:DBG:storeTravel")
+      Runtime.notify("CL:DBG:Travel.store")
       if (owner.account_isInNullState()) {
          Runtime.notify("CL:DBG:StoringTravel")
 
@@ -425,8 +477,8 @@ object HubContract : SmartContract() {
          Runtime.notify("CL:OK:StoredTravel", cityHashPair)
 
          // reserve the security deposit
-         val expiry = this.travel_getExpiry()
-         owner.account_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT))
+         // it's here because the compiler doesn't like it being below the following block
+         this.travel_reserveDeposit(owner)
 
          Runtime.notify("CL:OK:ReservedTravelDeposit", cityHashPair)
 
@@ -438,17 +490,40 @@ object HubContract : SmartContract() {
             val repRequired = this.travel_getRepRequired()
             val carrySpaceAvailable = this.travel_getCarrySpace()
             val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-            val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
-            val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
             val matchedDemand = demandsForCityPair.demands_findMatchableDemand(repRequired, carrySpaceAvailable, nowTime)
-            val timestampedMatch = nowTimeBytes.concat(matchedDemand)
-            Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
+            if (!matchedDemand.isEmpty()) {
+               // match travel -> demand
+               val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
+               val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
+               val timestampedMatch = nowTimeBytes.concat(matchedDemand)
+               Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
 
-            Runtime.notify("CL:OK:MatchedTravelWithDemand")
+               // match demand -> travel
+               val otherMatchKey = matchedDemand.demand_getMatchKey()
+               val timestampedOtherMatch = this.concat(nowTimeBytes)
+               Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
+
+               Runtime.notify("CL:OK:MatchedTravelWithDemand")
+            } else {
+               Runtime.notify("CL:DBG:NoMatchableDemandForTravel:1")
+            }
+         } else {
+            Runtime.notify("CL:DBG:NoMatchableDemandForTravel:2")
          }
 
-         Runtime.notify("CL:DBG:Travel.store")
+         // todo: set target script hash in funds reserved for demand, could get ugly
+
+         Runtime.notify("CL:RET:Travel.store")
       }
+   }
+
+   private fun TravelList.travels_getAt(index: Int): Travel {
+      return this.range(index * TRAVEL_SIZE, TRAVEL_SIZE)
+   }
+
+   private fun Travel.travel_reserveDeposit(owner: ScriptHash) {
+      val expiry = this.travel_getExpiry()
+      owner.account_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT))
    }
 
    private fun Travel.travel_getExpiry(): BigInteger {
@@ -466,6 +541,11 @@ object HubContract : SmartContract() {
       return BigInteger(bytes)
    }
 
+   private fun Travel.travel_getOwnerScriptHash(): ScriptHash {
+      val bytes = this.range(TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, SCRIPT_HASH_SIZE)
+      return bytes
+   }
+
    private fun Hash160Pair.travel_getStorageKey(): ByteArray {
       val travelStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_TRAVEL)
       val cityHashPairKey = this.concat(travelStorageKeySuffix)
@@ -481,10 +561,6 @@ object HubContract : SmartContract() {
       val matchKey = this.travel_getMatchKey()
       val match = Storage.get(Storage.currentContext(), matchKey)
       return !match.isEmpty()
-   }
-
-   private fun TravelList.travels_getAt(index: Int): Travel {
-      return this.range(index * TRAVEL_SIZE, TRAVEL_SIZE)
    }
 
    private fun TravelList.travels_findMatchableTravel(repRequired: BigInteger, carrySpaceRequired: BigInteger, nowTime: Int): Travel {
@@ -549,7 +625,7 @@ object HubContract : SmartContract() {
       val size = reservations.size
       var i = 0
       while (i < size) {
-         val reservation = reservations_get(reservations, i)
+         val reservation = reservations.res_getAt(i)
          val expiryBytes = take(reservation, TIMESTAMP_SIZE)
          val expiry = BigInteger(expiryBytes)
          val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)

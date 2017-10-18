@@ -51,13 +51,13 @@ object WalletContract : SmartContract() {
       // Get the tx amount (count the gas in outputs)
       val executingScriptHash = ExecutionEngine.executingScriptHash()
       val outputs = tx!!.outputs()
-      var outputsValue: Long = 0
+      var value: Long = 0
       outputs.forEach {
          if (it.scriptHash() == executingScriptHash)
-            outputsValue += it.value()
+            value += it.value()
       }
 
-      val result = HubContract("wallet_requestTx", signature, ownerPubKey, assetId, outputsValue)
+      val result = HubContract("wallet_requestTxOut", signature, ownerPubKey, value)
       return result
    }
 }

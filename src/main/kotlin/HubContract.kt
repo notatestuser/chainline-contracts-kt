@@ -15,6 +15,7 @@ import org.neo.smartcontract.framework.services.system.ExecutionEngine
 //       C  H  A  I  N     L  I  N  E
 
 typealias ScriptHash = ByteArray
+typealias PublicKey = ByteArray
 typealias Hash160 = ByteArray
 typealias Hash160Pair = ByteArray
 typealias Reservation = ByteArray
@@ -58,7 +59,7 @@ object HubContract : SmartContract() {
 
       // Initialization
       if (operation == "initialize")
-         return init(args[0], args[1], args[2], args[3])
+         return init(args[0], args[1], args[2])
       if (operation == "is_initialized")
          return isInitialized()
 
@@ -97,6 +98,8 @@ object HubContract : SmartContract() {
       }
 
       // Operations (only when initialized)
+      if (operation == "wallet_requestTxOut")
+         return args[0].wallet_requestTxOut(args[1], args[2], BigInteger(args[3]))
       if (operation == "wallet_validate")
          return args[0].wallet_validate(args[1])
       if (operation == "wallet_getBalance")
@@ -115,11 +118,9 @@ object HubContract : SmartContract() {
       return ! Storage.get(Storage.currentContext(), "Initialized").isEmpty()
    }
 
-   private fun init(assetId: ByteArray, walletScriptP1: ByteArray, walletScriptP2: ByteArray,
-                    walletScriptP3: ByteArray): Boolean {
+   private fun init(walletScriptP1: ByteArray, walletScriptP2: ByteArray, walletScriptP3: ByteArray): Boolean {
       if (isInitialized()) return false
       val trueBytes = byteArrayOf(1)
-      Storage.put(Storage.currentContext(), "AssetID", assetId)
       Storage.put(Storage.currentContext(), "WalletScriptP1", walletScriptP1)
       Storage.put(Storage.currentContext(), "WalletScriptP2", walletScriptP2)
       Storage.put(Storage.currentContext(), "WalletScriptP3", walletScriptP3)
@@ -158,6 +159,10 @@ object HubContract : SmartContract() {
       if (reservations.isEmpty()) return 0
       val header = Blockchain.getHeader(Blockchain.height())
       return reservations_getTotalOnHoldValue(reservations, header.timestamp())
+   }
+
+   private fun ScriptHash.wallet_requestTxOut(signature: Hash160, owner: PublicKey, value: BigInteger) {
+      // todo
    }
 
    // -==================-

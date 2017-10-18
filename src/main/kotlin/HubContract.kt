@@ -86,6 +86,8 @@ object HubContract : SmartContract() {
             return args[0].demand_getInfoBlob()
          if (operation == "test_travel_getCarrySpace")
             return args[0].travel_getCarrySpace()
+         if (operation == "test_travel_getOwnerScriptHash")
+            return args[0].travel_getOwnerScriptHash()
       }
 
       // Can't call IsInitialized() from here 'cause the compiler don't like it

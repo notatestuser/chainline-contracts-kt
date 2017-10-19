@@ -127,7 +127,7 @@ namespace CLTests {
       }
 
       [Fact]
-      public void TestGetTotalReservationHoldExpiry() {
+      public void TestGetTotalReservationHoldValueWhenSomeExpired() {
          ExecutionEngine engine = LoadContract("HubContract");
 
          var reservations = new byte[] {

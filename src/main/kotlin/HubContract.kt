@@ -32,12 +32,15 @@ object HubContract : SmartContract() {
    // Byte array sizes
    private const val VALUE_SIZE = 5
    private const val TIMESTAMP_SIZE = 4
-   private const val RESERVATION_SIZE = 30  // timestamp + value + script hash + bool
    private const val SCRIPT_HASH_SIZE = 20  // 160 bits
    private const val PUBLIC_KEY_SIZE = 32 // 256 bits
    private const val REP_REQUIRED_SIZE = 2
    private const val CARRY_SPACE_SIZE = 1
    private const val DEMAND_INFO_SIZE = 128
+
+   // Object sizes
+   private const val RESERVATION_SIZE =
+         TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE + 1
    private const val DEMAND_SIZE =
          TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + DEMAND_INFO_SIZE
    private const val TRAVEL_SIZE =
@@ -81,7 +84,7 @@ object HubContract : SmartContract() {
          if (operation == "test_reservation_isMultiSigUnlocked")
             return args[0].res_isMultiSigUnlocked()!!
          if (operation == "test_reservation_getTotalOnHoldValue")
-            return args[0].res_getTotalOnHoldGasValue()
+            return args[0].res_getTotalOnHoldGasValue(1)
          if (operation == "test_demand_getItemValue")
             return args[0].demand_getItemValue()
          if (operation == "test_demand_getInfoBlob")
@@ -103,8 +106,13 @@ object HubContract : SmartContract() {
          return args[0].wallet_validate(args[1])
       if (operation == "wallet_getBalance")
          return args[0].wallet_getBalance()
-      if (operation == "wallet_getBalanceOnHold")
-         return args[0].wallet_getGasOnHold()
+      // if (operation == "wallet_getBalanceOnHold") {
+      //    val reservations = Storage.get(Storage.currentContext(), args[0])
+      //    if (reservations.isEmpty())
+      //       return 0
+      //    val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+      //    val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
+      // }
       if (operation == "wallet_requestTxOut") {
          if (args[0].wallet_validate(args[1])) {
             val reservations = args[0].account_getReservations()
@@ -162,21 +170,12 @@ object HubContract : SmartContract() {
       return account.getBalance(getAssetId())
    }
 
-   private fun ScriptHash.wallet_getGasOnHold(): Long {
-      // todo: validate the user's wallet
-      //if (! this.wallet_validate())
-      val reservations: ByteArray = Storage.get(Storage.currentContext(), this)
-      if (reservations.isEmpty()) return 0
-      val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-      val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
-      return gasOnHold
-   }
-
    private fun ScriptHash.wallet_requestTxOut(signature: Hash160, owner: PublicKey, recipient: ScriptHash,
                                               value: BigInteger, reservations: ReservationList): Boolean {
       // check if balance is enough after reserved funds are considered
       val balance = this.wallet_getBalance()
-      val gasOnHold = reservations.res_getTotalOnHoldGasValue()
+      val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+      val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
       val effectiveBalance = balance - gasOnHold
       if (effectiveBalance < value.toLong())
          return false  // insufficient non-reserved funds
@@ -294,7 +293,7 @@ object HubContract : SmartContract() {
       return newList
    }
 
-   private fun ReservationList.res_getTotalOnHoldGasValue(nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp()): Long {
+   private fun ReservationList.res_getTotalOnHoldGasValue(nowTime: Int): Long {
       // todo: clean up expired reservation entries
       if (this.isEmpty())
          return 0
@@ -343,8 +342,9 @@ object HubContract : SmartContract() {
          Runtime.notify("CL:ERR:InsufficientFunds1")
          return false
       }
-      val reservations: ByteArray = Storage.get(Storage.currentContext(), this)
-      val gasOnHold = reservations.res_getTotalOnHoldGasValue()
+      val reservations = Storage.get(Storage.currentContext(), this)
+      val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+      val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
       if (gasOnHold < 0)  // wallet validation failed
          return false
       val effectiveBalance = balance - gasOnHold

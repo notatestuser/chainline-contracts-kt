@@ -16,7 +16,7 @@ The smart contracts powering Chain Line are written in Kotlin for the [Neo](http
 
 Compiled contract avm files may be found in the root directory of the project.
 
-> Note: You might have to put `org.neo.smartcontract.framework.jar` somewhere where dotnet can find it (try your PATH). You can build the jar by running `mvn install` in `vendor/neo-devpack-java`.
+> Note: You might have to put `org.neo.smartcontract.framework.jar` somewhere where dotnet can find it (try your PATH or `/usr/local/share/dotnet`). You can build the jar by running `mvn install` in `vendor/neo-devpack-java`. It will be created in `target/`.
 
 ## Running the tests
 

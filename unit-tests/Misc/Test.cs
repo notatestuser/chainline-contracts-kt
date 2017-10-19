@@ -4,19 +4,19 @@ using CLTests.Utilities;
 
 namespace CLTests {
    public abstract class Test {
-      public ITestOutputHelper output { private set; get; }
-      public ExecutionHelper executionHelper { private set; get; }
-      public InteropService interopService { private set; get; }
+      public ITestOutputHelper Output { private set; get; }
+      public ExecutionHelper ExecutionHelper { private set; get; }
+      public InteropService InteropService { private set; get; }
 
       public Test(ITestOutputHelper output) {
-         this.output = output;
-         this.executionHelper = new ExecutionHelper(output);
-         this.interopService = new StateReader(output);
+         this.Output = output;
+         this.ExecutionHelper = new ExecutionHelper(output);
+         this.InteropService = new StateReader(output);
       }
 
       protected ExecutionEngine LoadContract(string contractName) {
-         byte[] program = executionHelper.Compile(contractName);
-         var engine = new ExecutionEngine(null, new Crypto(), null, interopService);
+         byte[] program = ExecutionHelper.Compile(contractName);
+         var engine = new ExecutionEngine(null, new Crypto(), null, InteropService);
          engine.LoadScript(program);
          return engine;
       }
@@ -24,7 +24,7 @@ namespace CLTests {
       protected void ExecuteScript(ExecutionEngine engine, ScriptBuilder sb) {
          engine.LoadScript(sb.ToArray());
          engine.Execute();
-         VMHelper.AssertNoFaultState(engine, output);
+         VMHelper.AssertNoFaultState(engine, Output);
       }
    }
 }

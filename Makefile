@@ -5,6 +5,9 @@ build-test: build-classes test
 watch: build-neoj install-chokidar
 	chokidar src/**/*.kt -c "make build-test"
 
+watch-sources: build-neoj install-chokidar
+	chokidar src/**/*.kt -m "make build-classes"
+
 watch-classes: build-neoj install-chokidar
 	chokidar target/**/*.class -m "make build-avms && make test"
 
@@ -26,4 +29,3 @@ init-submodules:
 
 install-chokidar:
 	npm i -g chokidar-cli
-

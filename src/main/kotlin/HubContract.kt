@@ -44,7 +44,8 @@ object HubContract : SmartContract() {
          TIMESTAMP_SIZE + SCRIPT_HASH_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE
 
    // Maximum values
-   private const val MAX_GAS_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
+   // the maximum value of a transaction is fixed at ~5497 GAS so that we can fit it into 5 bytes.
+   private const val MAX_GAS_TX_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
 
    // Fees
    private const val FEE_DEMAND_REWARD: Long = 300000000  // 3 GAS
@@ -76,7 +77,7 @@ object HubContract : SmartContract() {
          if (operation == "test_reservation_getValue")
             return args[0].res_getValue()
          if (operation == "test_reservation_getDestination")
-            return args[0].res_getDestination()
+            return args[0].res_getRecipient()
          if (operation == "test_reservation_isMultiSigUnlocked")
             return args[0].res_isMultiSigUnlocked()!!
          if (operation == "test_reservation_getTotalOnHoldValue")
@@ -97,15 +98,23 @@ object HubContract : SmartContract() {
          return false
       }
 
-      // Operations (only when initialized)
+      // Wallet operations
       if (operation == "wallet_validate")
          return args[0].wallet_validate(args[1])
       if (operation == "wallet_getBalance")
          return args[0].wallet_getBalance()
       if (operation == "wallet_getBalanceOnHold")
          return args[0].wallet_getGasOnHold()
-      if (operation == "wallet_requestTxOut")
-         return args[0].wallet_requestTxOut(args[1], args[2], args[3], BigInteger(args[4]))
+      if (operation == "wallet_requestTxOut") {
+         if (args[0].wallet_validate(args[1])) {
+            val reservations = args[0].account_getReservations()
+            val bool1 = args[0].wallet_requestTxOut(args[1], args[2], args[3], BigInteger(args[4]), reservations)
+            val bool2 = args[0].wallet_requestTxOut2(args[2], args[3], BigInteger(args[4]), reservations)
+            return bool1 && bool2
+         }
+         Runtime.notify("CL:ERR:InvalidWallet")
+         return false
+      }
 
       return false
    }
@@ -141,7 +150,8 @@ object HubContract : SmartContract() {
                .concat(ExecutionEngine.executingScriptHash())
                .concat(getWalletScriptP3())
       val expectedScriptHash = hash160(expectedScript)
-      if (this == expectedScriptHash) return true
+      if (this == expectedScriptHash)
+         return true
       Runtime.notify("CL:ERR:WalletValidateFail", expectedScriptHash, expectedScript)
       return false
    }
@@ -163,42 +173,34 @@ object HubContract : SmartContract() {
    }
 
    private fun ScriptHash.wallet_requestTxOut(signature: Hash160, owner: PublicKey, recipient: ScriptHash,
-                                              value: BigInteger): Boolean {
-      if (!this.wallet_validate(owner))
-         return false
-
-      // "reservations" tell us the account's reserved balance
-      val reservations = this.account_getReservations()
-      val gasOnHold = reservations.res_getTotalOnHoldGasValue()
-      if (gasOnHold <= 0)
-         return true
-
-      // are we fulfilling a multi-sig reservation intended for a particular recipient?
-      val matchIdx = reservations.res_findBy(value)
-      if (matchIdx >= 0) {
-         val matchingRes = reservations.res_getAt(matchIdx)
-         val resRecipient = matchingRes.res_getDestination()
-         if (recipient == resRecipient) {
-            val isMultiSigUnlocked = matchingRes.res_isMultiSigUnlocked()
-            if (isMultiSigUnlocked!!) {
-               val newReservations = reservations.res_replaceValueAt(matchIdx, BigInteger.valueOf(0))
-               this.account_storeReservations(newReservations)
-               return true  // allow the withdrawal
-            } else {
-               // flip the multi-sig flag to unlock it
-               val newReservations = reservations.res_unlockMultiSigAt(matchIdx)
-               this.account_storeReservations(newReservations)
-               return false  // can't withdraw yet. needs another signature.
-            }
-         }
-      }
-
+                                              value: BigInteger, reservations: ReservationList): Boolean {
       // check if balance is enough after reserved funds are considered
       val balance = this.wallet_getBalance()
+      val gasOnHold = reservations.res_getTotalOnHoldGasValue()
       val effectiveBalance = balance - gasOnHold
       if (effectiveBalance < value.toLong())
          return false  // insufficient non-reserved funds
       return true
+   }
+
+   private fun ScriptHash.wallet_requestTxOut2(owner: PublicKey, recipient: ScriptHash, value: BigInteger,
+                                               reservations: ReservationList): Boolean {
+      val matchIdx = reservations.res_findBy(value)
+      if (matchIdx > -1) {
+         val matchingRes = reservations.res_getAt(matchIdx)
+         val resRecipient = matchingRes.res_getRecipient()
+         if (recipient == resRecipient && matchingRes.res_isMultiSigUnlocked()!!) {
+            val newReservations = reservations.res_replaceValueAt(matchIdx, BigInteger.valueOf(0))
+            this.account_storeReservations(newReservations)
+            return true  // allow the withdrawal
+         } else if (recipient == resRecipient) {  // had to duplicate that condition to avoid compiler errors
+            // otherwise flip the multi-sig flag to unlock it
+            val newReservations = reservations.res_unlockMultiSigAt(matchIdx)
+            this.account_storeReservations(newReservations)
+            return false  // can't withdraw yet. needs another signature.
+         }
+      }
+      return true  // continue in the calling method
    }
 
    // -==================-
@@ -221,7 +223,7 @@ object HubContract : SmartContract() {
 
    private fun ReservationList.res_findBy(value: BigInteger): Int {
       if (this.isEmpty())
-         return 0
+         return -1
       val count = this.size / RESERVATION_SIZE
       var i = 0
       while (i < count) {
@@ -229,6 +231,24 @@ object HubContract : SmartContract() {
          val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
          val valueFound = BigInteger(valueBytes)
          if (value == valueFound)
+            return i
+         i++
+      }
+      return -1
+   }
+
+   private fun ReservationList.res_findBy(value: BigInteger, recipient: ScriptHash): Int {
+      if (this.isEmpty())
+         return -1
+      val count = this.size / RESERVATION_SIZE
+      var i = 0
+      while (i < count) {
+         val reservation = this.res_getAt(i)
+         val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
+         val valueFound = BigInteger(valueBytes)
+         val recipientFound = reservation.res_getRecipient()
+         if (value == valueFound &&
+               recipient == recipientFound)
             return i
          i++
       }
@@ -305,7 +325,7 @@ object HubContract : SmartContract() {
       return BigInteger(valueBytes)
    }
 
-   private fun Reservation.res_getDestination(): ScriptHash {
+   private fun Reservation.res_getRecipient(): ScriptHash {
       val scriptHash = this.range(TIMESTAMP_SIZE + VALUE_SIZE, SCRIPT_HASH_SIZE)
       return scriptHash
    }
@@ -362,7 +382,7 @@ object HubContract : SmartContract() {
       // checking individual arg lengths doesn't seem to work here
       // I tried a lot of things, grr compiler
       val nil = byteArrayOf()
-      if (itemValue.toLong() > MAX_GAS_VALUE)
+      if (itemValue.toLong() > MAX_GAS_TX_VALUE)
          return nil
       // size: 160 bytes
       val expectedSize = DEMAND_SIZE
@@ -490,6 +510,11 @@ object HubContract : SmartContract() {
       return this.range(TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, DEMAND_INFO_SIZE)
    }
 
+   private fun Demand.demand_getMatchedAtTime(): BigInteger {
+      val bytes = this.range(TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + DEMAND_INFO_SIZE, TIMESTAMP_SIZE)
+      return BigInteger(bytes)
+   }
+
    private fun Hash160Pair.demand_getStorageKey(): ByteArray {
       val demandStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_DEMAND)
       val cityHashPairKey = this.concat(demandStorageKeySuffix)
@@ -604,10 +629,13 @@ object HubContract : SmartContract() {
                val demandExpiry = matchedDemand.demand_getExpiry()
                val ownerReservationList = demandOwner.account_getReservations()
                val reservationAtIdx = ownerReservationList.res_findBy(demandValue)
-               val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
-               demandOwner.account_storeReservations(rewrittenReservationList)
-
-               Runtime.notify("CL:OK:RewroteDemandFundsReservation")
+               if (reservationAtIdx > 0) {
+                  val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
+                  demandOwner.account_storeReservations(rewrittenReservationList)
+                  Runtime.notify("CL:OK:RewroteDemandFundsReservation")
+               } else {
+                  Runtime.notify("CL:ERR:ReservationForDemandNotFound")
+               }
             } else {
                Runtime.notify("CL:DBG:NoMatchableDemandForTravel:1")
             }
@@ -646,6 +674,11 @@ object HubContract : SmartContract() {
    private fun Travel.travel_getOwnerScriptHash(): ScriptHash {
       val bytes = this.range(TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, SCRIPT_HASH_SIZE)
       return bytes
+   }
+
+   private fun Travel.travel_getMatchedAtTime(): BigInteger {
+      val bytes = this.range(TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + SCRIPT_HASH_SIZE, TIMESTAMP_SIZE)
+      return BigInteger(bytes)
    }
 
    private fun Hash160Pair.travel_getStorageKey(): ByteArray {

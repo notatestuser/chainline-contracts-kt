@@ -6,10 +6,10 @@ watch: build-neoj install-chokidar
 	chokidar src/**/*.kt -c "make build-test"
 
 watch-sources: build-neoj install-chokidar
-	chokidar src/**/*.kt -m "make build-classes"
+	chokidar src/**/*.kt -c "make build-classes"
 
 watch-classes: build-neoj install-chokidar
-	chokidar target/**/*.class -m "make build-avms && make test"
+	chokidar target/**/*.class -c "make build-avms && make test"
 
 build-classes:
 	mvn clean install

@@ -80,7 +80,7 @@ object HubContract : SmartContract() {
          if (operation == "test_reservation_isMultiSigUnlocked")
             return args[0].res_isMultiSigUnlocked()!!
          if (operation == "test_reservation_getTotalOnHoldValue")
-            return args[0].res_getTotalOnHoldValue()
+            return args[0].res_getTotalOnHoldGasValue()
          if (operation == "test_demand_getItemValue")
             return args[0].demand_getItemValue()
          if (operation == "test_demand_getInfoBlob")
@@ -98,14 +98,14 @@ object HubContract : SmartContract() {
       }
 
       // Operations (only when initialized)
-      if (operation == "wallet_requestTxOut")
-         return args[0].wallet_requestTxOut(args[1], args[2], BigInteger(args[3]))
       if (operation == "wallet_validate")
          return args[0].wallet_validate(args[1])
       if (operation == "wallet_getBalance")
          return args[0].wallet_getBalance()
       if (operation == "wallet_getBalanceOnHold")
-         return args[0].wallet_getBalanceOnHold()
+         return args[0].wallet_getGasOnHold()
+      if (operation == "wallet_requestTxOut")
+         return args[0].wallet_requestTxOut(args[1], args[2], args[3], BigInteger(args[4]))
 
       return false
    }
@@ -152,43 +152,58 @@ object HubContract : SmartContract() {
       return account.getBalance(getAssetId())
    }
 
-   private fun ScriptHash.wallet_getBalanceOnHold(): Long {
+   private fun ScriptHash.wallet_getGasOnHold(): Long {
       // todo: validate the user's wallet
       //if (! this.wallet_validate())
       val reservations: ByteArray = Storage.get(Storage.currentContext(), this)
       if (reservations.isEmpty()) return 0
-      val header = Blockchain.getHeader(Blockchain.height())
-      return reservations_getTotalOnHoldValue(reservations, header.timestamp())
+      val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+      val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
+      return gasOnHold
    }
 
-   private fun ScriptHash.wallet_requestTxOut(signature: Hash160, owner: PublicKey, value: BigInteger) {
-      // todo
+   private fun ScriptHash.wallet_requestTxOut(signature: Hash160, owner: PublicKey, recipient: ScriptHash,
+                                              value: BigInteger): Boolean {
+      if (!this.wallet_validate(owner))
+         return false
+
+      // "reservations" tell us the account's reserved balance
+      val reservations = this.account_getReservations()
+      val gasOnHold = reservations.res_getTotalOnHoldGasValue()
+      if (gasOnHold <= 0)
+         return true
+
+      // are we fulfilling a multi-sig reservation intended for a particular recipient?
+      val matchIdx = reservations.res_findBy(value)
+      if (matchIdx >= 0) {
+         val matchingRes = reservations.res_getAt(matchIdx)
+         val resRecipient = matchingRes.res_getDestination()
+         if (recipient == resRecipient) {
+            val isMultiSigUnlocked = matchingRes.res_isMultiSigUnlocked()
+            if (isMultiSigUnlocked!!) {
+               val newReservations = reservations.res_replaceValueAt(matchIdx, BigInteger.valueOf(0))
+               this.account_storeReservations(newReservations)
+               return true  // allow the withdrawal
+            } else {
+               // flip the multi-sig flag to unlock it
+               val newReservations = reservations.res_unlockMultiSigAt(matchIdx)
+               this.account_storeReservations(newReservations)
+               return false  // can't withdraw yet. needs another signature.
+            }
+         }
+      }
+
+      // check if balance is enough after reserved funds are considered
+      val balance = this.wallet_getBalance()
+      val effectiveBalance = balance - gasOnHold
+      if (effectiveBalance < value.toLong())
+         return false  // insufficient non-reserved funds
+      return true
    }
 
    // -==================-
    // -=  Reservations  =-
    // -==================-
-
-   private fun reservations_getTotalOnHoldValue(all: ReservationList, nowTime: Int): Long {
-      // todo: clean up expired reservation entries
-      if (all.isEmpty())
-         return 0
-      val count = all.size / RESERVATION_SIZE
-      var i = 0
-      var total: Long = 0
-      while (i < count) {
-         val reservation = all.res_getAt(i)
-         val expiryBytes = take(reservation, TIMESTAMP_SIZE)
-         val expiry = BigInteger(expiryBytes)
-         if (expiry.toInt() > nowTime) {
-            val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
-            val value = BigInteger(valueBytes)
-            total += value.toLong()
-         }
-         i++
-      }
-      return total
-   }
 
    private fun reservation_create(expiry: BigInteger, value: BigInteger, destination: ScriptHash): Reservation {
       val falseBytes = byteArrayOf(0)
@@ -204,24 +219,32 @@ object HubContract : SmartContract() {
       return this.range(index * RESERVATION_SIZE, RESERVATION_SIZE)
    }
 
-   private fun ReservationList.res_findBy(expiry: BigInteger, value: BigInteger): Int {
+   private fun ReservationList.res_findBy(value: BigInteger): Int {
       if (this.isEmpty())
          return 0
       val count = this.size / RESERVATION_SIZE
       var i = 0
       while (i < count) {
          val reservation = this.res_getAt(i)
-         val expiryBytes = take(reservation, TIMESTAMP_SIZE)
-         val expiryFound = BigInteger(expiryBytes)
-         if (expiry == expiryFound) {
-            val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
-            val valueFound = BigInteger(valueBytes)
-            if (value == valueFound)
-               return i
-         }
+         val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
+         val valueFound = BigInteger(valueBytes)
+         if (value == valueFound)
+            return i
          i++
       }
       return -1
+   }
+
+   private fun ReservationList.res_replaceValueAt(idx: Int, value: BigInteger): ReservationList {
+      val items = this.size / RESERVATION_SIZE
+      val skipCount = idx * RESERVATION_SIZE
+      val before = range(this, 0, skipCount + TIMESTAMP_SIZE)
+      val restIdx = skipCount + VALUE_SIZE
+      val after = range(restIdx, this.size - restIdx)
+      val newList = before
+            .concat(value.toByteArray(VALUE_SIZE))
+            .concat(after)
+      return newList
    }
 
    private fun ReservationList.res_replaceRecipientAt(idx: Int, recipient: ScriptHash): ReservationList {
@@ -229,13 +252,47 @@ object HubContract : SmartContract() {
       val items = this.size / RESERVATION_SIZE
       val skipCount = idx * RESERVATION_SIZE
       val before = range(this, 0, skipCount + TIMESTAMP_SIZE + VALUE_SIZE)
-      val restCount = skipCount + SCRIPT_HASH_SIZE + 1
-      val after = range(restCount, this.size - restCount)
+      val restIdx = skipCount + SCRIPT_HASH_SIZE + 1
+      val after = range(restIdx, this.size - restIdx)
       val newList = before
             .concat(recipient)
             .concat(falseBytes)
             .concat(after)
       return newList
+   }
+
+   private fun ReservationList.res_unlockMultiSigAt(idx: Int): ReservationList {
+      val trueBytes = byteArrayOf(1)
+      val items = this.size / RESERVATION_SIZE
+      val skipCount = idx * RESERVATION_SIZE
+      val before = range(this, 0, skipCount + TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE)
+      val restIdx = skipCount
+      val after = range(restIdx, this.size - restIdx)
+      val newList = before
+            .concat(trueBytes)
+            .concat(after)
+      return newList
+   }
+
+   private fun ReservationList.res_getTotalOnHoldGasValue(nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp()): Long {
+      // todo: clean up expired reservation entries
+      if (this.isEmpty())
+         return 0
+      val count = this.size / RESERVATION_SIZE
+      var i = 0
+      var total: Long = 0
+      while (i < count) {
+         val reservation = this.res_getAt(i)
+         val expiryBytes = take(reservation, TIMESTAMP_SIZE)
+         val expiry = BigInteger(expiryBytes)
+         if (expiry.toInt() > nowTime) {
+            val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
+            val value = BigInteger(valueBytes)
+            total += value.toLong()
+         }
+         i++
+      }
+      return total
    }
 
    private fun Reservation.res_getExpiry(): BigInteger {
@@ -259,11 +316,6 @@ object HubContract : SmartContract() {
       return multiSigUnlocked == trueBytes
    }
 
-   private fun ReservationList.res_getTotalOnHoldValue(): Long {
-      val holdValue = reservations_getTotalOnHoldValue(this, 1)
-      return holdValue
-   }
-
    private fun ScriptHash.account_reserveFunds(expiry: BigInteger, value: BigInteger, recipient: ScriptHash): Boolean {
       val balance = this.wallet_getBalance()
       val toReserve = value.toLong()
@@ -272,8 +324,7 @@ object HubContract : SmartContract() {
          return false
       }
       val reservations: ByteArray = Storage.get(Storage.currentContext(), this)
-      val header = Blockchain.getHeader(Blockchain.height())
-      val gasOnHold = reservations_getTotalOnHoldValue(reservations, header.timestamp())
+      val gasOnHold = reservations.res_getTotalOnHoldGasValue()
       if (gasOnHold < 0)  // wallet validation failed
          return false
       val effectiveBalance = balance - gasOnHold
@@ -552,7 +603,7 @@ object HubContract : SmartContract() {
                val demandValue = matchedDemand.demand_getItemValue()
                val demandExpiry = matchedDemand.demand_getExpiry()
                val ownerReservationList = demandOwner.account_getReservations()
-               val reservationAtIdx = ownerReservationList.res_findBy(demandExpiry, demandValue)
+               val reservationAtIdx = ownerReservationList.res_findBy(demandValue)
                val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
                demandOwner.account_storeReservations(rewrittenReservationList)
 
@@ -642,8 +693,8 @@ object HubContract : SmartContract() {
       //return Storage.get(Storage.currentContext(), "AssetID")
       // now reversed. see: https://git.io/vdM02
       val gasAssetId = byteArrayOf(231 as Byte, 45, 40, 105, 121, 238 as Byte, 108, 177 as Byte, 3, 230 as Byte, 93,
-         253 as Byte, 223 as Byte, 178 as Byte, 227 as Byte, 132 as Byte, 16, 11, 141 as Byte, 20, 142 as Byte, 119,
-         88, 222 as Byte, 66, 228 as Byte, 22, 139 as Byte, 113, 121, 44, 96)
+            253 as Byte, 223 as Byte, 178 as Byte, 227 as Byte, 132 as Byte, 16, 11, 141 as Byte, 20, 142 as Byte, 119,
+            88, 222 as Byte, 66, 228 as Byte, 22, 139 as Byte, 113, 121, 44, 96)
       return gasAssetId
    }
 

@@ -450,6 +450,10 @@ object HubContract : SmartContract() {
 
                Runtime.notify("CL:OK:MatchedDemandWithTravel")
 
+               // clear existing reserved funds
+               // (this is ok to do as an account may only have one demand or travel active at any one time)
+               Storage.delete(Storage.currentContext(), owner)
+
                // reserve the item's value and fee
                // since we found a matchable travel we can set the recipient script hash in the reservation
                this.demand_reserveValueAndFee(owner, matchedTravel)
@@ -591,6 +595,10 @@ object HubContract : SmartContract() {
          Storage.put(Storage.currentContext(), cityHashPairKey, newTravelsForCityPair)
 
          Runtime.notify("CL:OK:StoredTravel", cityHashPair)
+
+         // clear existing reserved funds
+         // (this is ok to do as an account may only have one demand or travel active at any one time)
+         Storage.delete(Storage.currentContext(), owner)
 
          // reserve the security deposit
          // it's here because the compiler doesn't like it being below the following block

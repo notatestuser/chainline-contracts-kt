@@ -116,9 +116,9 @@ object HubContract : SmartContract() {
       if (operation == "wallet_requestTxOut") {
          if (args[0].wallet_validate(args[1])) {
             val reservations = args[0].account_getReservations()
-            val bool1 = args[0].wallet_requestTxOut(args[1], args[2], args[3], BigInteger(args[4]), reservations)
-            val bool2 = args[0].wallet_requestTxOut2(args[2], args[3], BigInteger(args[4]), reservations)
-            return bool1 && bool2
+            val check1 = args[0].wallet_requestTxOut(args[1], args[2], args[3], BigInteger(args[4]), reservations)
+            val check2 = args[0].wallet_requestTxOut2(args[2], args[3], BigInteger(args[4]), reservations)
+            return check1 && check2
          }
          Runtime.notify("CL:ERR:InvalidWallet")
          return false
@@ -172,18 +172,23 @@ object HubContract : SmartContract() {
 
    private fun ScriptHash.wallet_requestTxOut(signature: Hash160, owner: PublicKey, recipient: ScriptHash,
                                               value: BigInteger, reservations: ReservationList): Boolean {
+      Runtime.notify("CL:DBG:requestTxOut")
       // check if balance is enough after reserved funds are considered
       val balance = this.wallet_getBalance()
       val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
       val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
       val effectiveBalance = balance - gasOnHold
-      if (effectiveBalance < value.toLong())
+      if (effectiveBalance < value.toLong()) {
+         Runtime.notify("CL:ERR:InsufficientBalance")
          return false  // insufficient non-reserved funds
+      }
+      Runtime.notify("CL:OK:RequestTxOut1")
       return true
    }
 
    private fun ScriptHash.wallet_requestTxOut2(owner: PublicKey, recipient: ScriptHash, value: BigInteger,
                                                reservations: ReservationList): Boolean {
+      Runtime.notify("CL:DBG:requestTxOut2")
       val matchIdx = reservations.res_findBy(value)
       if (matchIdx > -1) {
          val matchingRes = reservations.res_getAt(matchIdx)
@@ -191,6 +196,7 @@ object HubContract : SmartContract() {
          if (recipient == resRecipient && matchingRes.res_isMultiSigUnlocked()!!) {
             val newReservations = reservations.res_replaceValueAt(matchIdx, BigInteger.valueOf(0))
             this.account_storeReservations(newReservations)
+            Runtime.notify("CL:OK:requestTxOut2:1")
             return true  // allow the withdrawal
          } else if (recipient == resRecipient) {  // had to duplicate that condition to avoid compiler errors
             // otherwise flip the multi-sig flag to unlock it
@@ -199,6 +205,7 @@ object HubContract : SmartContract() {
             return false  // can't withdraw yet. needs another signature.
          }
       }
+      Runtime.notify("CL:OK:requestTxOut2:2")
       return true  // continue in the calling method
    }
 

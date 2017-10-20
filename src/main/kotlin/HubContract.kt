@@ -17,6 +17,7 @@ import org.neo.smartcontract.framework.services.system.ExecutionEngine
 typealias ScriptHash = ByteArray
 typealias PublicKey = ByteArray
 typealias Hash160 = ByteArray
+typealias Hash256 = ByteArray
 typealias Hash160Pair = ByteArray
 typealias Reservation = ByteArray
 typealias ReservationList = ByteArray
@@ -33,7 +34,8 @@ object HubContract : SmartContract() {
    private const val VALUE_SIZE = 5
    private const val TIMESTAMP_SIZE = 4
    private const val SCRIPT_HASH_SIZE = 20  // 160 bits
-   private const val PUBLIC_KEY_SIZE = 32 // 256 bits
+   private const val TX_HASH_SIZE = 32  // 256 bits
+   private const val PUBLIC_KEY_SIZE = 32
    private const val REP_REQUIRED_SIZE = 2
    private const val CARRY_SPACE_SIZE = 1
    private const val DEMAND_INFO_SIZE = 128
@@ -82,7 +84,7 @@ object HubContract : SmartContract() {
          if (operation == "test_reservation_getDestination")
             return args[0].res_getRecipient()
          if (operation == "test_reservation_isMultiSigUnlocked")
-            return args[0].res_isMultiSigUnlocked()!!
+            return args[0].res_isMultiSigUnlocked()
          if (operation == "test_reservation_getTotalOnHoldValue")
             return args[0].res_getTotalOnHoldGasValue(1)
          if (operation == "test_demand_getItemValue")
@@ -116,11 +118,14 @@ object HubContract : SmartContract() {
       if (operation == "wallet_requestTxOut") {
          if (args[0].wallet_validate(args[1])) {
             val reservations = args[0].account_getReservations()
-            val check1 = args[0].wallet_requestTxOut(args[1], args[2], args[3], BigInteger(args[4]), reservations)
-            val check2 = args[0].wallet_requestTxOut2(args[2], args[3], BigInteger(args[4]), reservations)
-            return check1 && check2
+            return args[0].wallet_requestTxOut(BigInteger(args[3]), reservations)
          }
          Runtime.notify("CL:ERR:InvalidWallet")
+         return false
+      }
+      if (operation == "wallet_setReservationPaidToRecipientTxHash") {
+         if (args[0].wallet_validate(args[1]))
+            return args[0].wallet_setReservationPaidToRecipientTxHash(args[2], BigInteger(args[3]), args[4])
          return false
       }
 
@@ -170,8 +175,7 @@ object HubContract : SmartContract() {
       return account.getBalance(getAssetId())
    }
 
-   private fun ScriptHash.wallet_requestTxOut(signature: Hash160, owner: PublicKey, recipient: ScriptHash,
-                                              value: BigInteger, reservations: ReservationList): Boolean {
+   private fun ScriptHash.wallet_requestTxOut(value: BigInteger, reservations: ReservationList): Boolean {
       Runtime.notify("CL:DBG:requestTxOut")
       // check if balance is enough after reserved funds are considered
       val balance = this.wallet_getBalance()
@@ -186,27 +190,33 @@ object HubContract : SmartContract() {
       return true
    }
 
-   private fun ScriptHash.wallet_requestTxOut2(owner: PublicKey, recipient: ScriptHash, value: BigInteger,
-                                               reservations: ReservationList): Boolean {
-      Runtime.notify("CL:DBG:requestTxOut2")
-      val matchIdx = reservations.res_findBy(value)
+   // because we can't access storage in a verify script, we have to use an invoke to set the tx hash.
+   // this function finds the given transaction and makes sure the supplied value went to the recipient
+   private fun ScriptHash.wallet_setReservationPaidToRecipientTxHash(recipient: ScriptHash, value: BigInteger,
+                                                                     txHash: Hash256): Boolean {
+      Runtime.notify("CL:DBG:setReservationPaidToRecipientTxHash")
+      val reservations = this.account_getReservations()
+      val matchIdx = reservations.res_findBy(value, recipient)
       if (matchIdx > -1) {
-         val matchingRes = reservations.res_getAt(matchIdx)
-         val resRecipient = matchingRes.res_getRecipient()
-         if (recipient == resRecipient && matchingRes.res_isMultiSigUnlocked()!!) {
-            val newReservations = reservations.res_replaceValueAt(matchIdx, BigInteger.valueOf(0))
-            this.account_storeReservations(newReservations)
-            Runtime.notify("CL:OK:requestTxOut2:1")
-            return true  // allow the withdrawal
-         } else if (recipient == resRecipient) {  // had to duplicate that condition to avoid compiler errors
-            // otherwise flip the multi-sig flag to unlock it
-            val newReservations = reservations.res_unlockMultiSigAt(matchIdx)
-            this.account_storeReservations(newReservations)
-            return false  // can't withdraw yet. needs another signature.
+         val matchedRes = reservations.res_getAt(matchIdx)
+         val stored = Storage.get(Storage.currentContext(), matchedRes)
+         if (stored.isEmpty()) {
+            val tx = Blockchain.getTransaction(txHash)
+            val outputs = tx!!.outputs()
+            var txValue: Long = 0
+            outputs.forEach {
+               if (it.scriptHash() == recipient)
+                  txValue += it.value()
+            }
+            if (txValue >= value.toLong()) {
+               Storage.put(Storage.currentContext(), matchedRes, txHash)
+               return true
+            }
+            return false
          }
+         return false
       }
-      Runtime.notify("CL:OK:requestTxOut2:2")
-      return true  // continue in the calling method
+      return false
    }
 
    // -==================-
@@ -261,18 +271,6 @@ object HubContract : SmartContract() {
       return -1
    }
 
-   private fun ReservationList.res_replaceValueAt(idx: Int, value: BigInteger): ReservationList {
-      val items = this.size / RESERVATION_SIZE
-      val skipCount = idx * RESERVATION_SIZE
-      val before = range(this, 0, skipCount + TIMESTAMP_SIZE)
-      val restIdx = skipCount + VALUE_SIZE
-      val after = range(restIdx, this.size - restIdx)
-      val newList = before
-            .concat(value.toByteArray(VALUE_SIZE))
-            .concat(after)
-      return newList
-   }
-
    private fun ReservationList.res_replaceRecipientAt(idx: Int, recipient: ScriptHash): ReservationList {
       val falseBytes = byteArrayOf(0)
       val items = this.size / RESERVATION_SIZE
@@ -309,12 +307,14 @@ object HubContract : SmartContract() {
       var total: Long = 0
       while (i < count) {
          val reservation = this.res_getAt(i)
-         val expiryBytes = take(reservation, TIMESTAMP_SIZE)
-         val expiry = BigInteger(expiryBytes)
-         if (expiry.toInt() > nowTime) {
-            val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
-            val value = BigInteger(valueBytes)
-            total += value.toLong()
+         if (!reservation.res_wasPaidToRecipient()) {
+            val expiryBytes = take(reservation, TIMESTAMP_SIZE)
+            val expiry = BigInteger(expiryBytes)
+            if (expiry.toInt() > nowTime) {
+               val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
+               val value = BigInteger(valueBytes)
+               total += value.toLong()
+            }
          }
          i++
       }
@@ -336,10 +336,17 @@ object HubContract : SmartContract() {
       return scriptHash
    }
 
-   private fun Reservation.res_isMultiSigUnlocked(): Boolean? {
+   private fun Reservation.res_isMultiSigUnlocked(): Boolean {
       val trueBytes = byteArrayOf(1)
       val multiSigUnlocked = this.range(TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE, 1)
-      return multiSigUnlocked == trueBytes
+      return multiSigUnlocked!! == trueBytes
+   }
+
+   private fun Reservation.res_wasPaidToRecipient(): Boolean {
+      val stored = Storage.get(Storage.currentContext(), this)
+      if (stored.size == TX_HASH_SIZE)
+         return true
+      return false
    }
 
    private fun ScriptHash.account_reserveFunds(expiry: BigInteger, value: BigInteger, recipient: ScriptHash): Boolean {

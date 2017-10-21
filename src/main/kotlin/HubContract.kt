@@ -120,11 +120,11 @@ object HubContract : SmartContract() {
       //    val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
       //    val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
       // }
-      if (operation == "wallet_getReservations")
-         return args[0].wallet_getReservations()
+      if (operation == "wallet_getFundReservations")
+         return args[0].wallet_getFundReservations()
       if (operation == "wallet_requestTxOut") {
          if (args[0].wallet_validate(args[1])) {
-            val reservations = args[0].wallet_getReservations()
+            val reservations = args[0].wallet_getFundReservations()
             return args[0].wallet_requestTxOut(BigInteger(args[3]), reservations)
          }
          Runtime.notify("CL:ERR:InvalidWallet")
@@ -137,8 +137,8 @@ object HubContract : SmartContract() {
                // reset account states, allow new transactions
                Storage.delete(Storage.currentContext(), args[0])  // reset demand owner state
                Storage.delete(Storage.currentContext(), args[2])  // reset traveller/recipient state
-               args[0].wallet_clearReservations()
-               args[2].wallet_clearReservations()
+               args[0].wallet_clearFundReservations()
+               args[2].wallet_clearFundReservations()
 
                // increment account reputation scores
                args[0].wallet_incrementReputation()
@@ -180,12 +180,18 @@ object HubContract : SmartContract() {
 
       // Demand/travel open
       if (operation == "demand_open") {
-         val demand = demand_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), args[5])
-         return demand.demand_store(args[0], args[6], args[7])
+         if (args[0].wallet_canOpenDemandOrTravel()) {
+            val demand = demand_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), args[5])
+            return demand.demand_store(args[0], args[6], args[7])
+         }
+         return false
       }
       if (operation == "travel_open") {
-         val travel = travel_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]))
-         return travel.travel_store(args[0], args[4], args[5])
+         if (args[0].wallet_canOpenDemandOrTravel()) {
+            val travel = travel_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]))
+            return travel.travel_store(args[0], args[4], args[5])
+         }
+         return false
       }
 
       return false
@@ -268,7 +274,7 @@ object HubContract : SmartContract() {
       }
       val reservation = reservation_create(expiry, value, recipient)
       val newReservations = reservations.concat(reservation)
-      reservation.wallet_storeReservations(newReservations)
+      reservation.wallet_storeFundReservations(newReservations)
       Runtime.notify("CL:OK:ReservedFunds", reservation)
       return true
    }
@@ -285,7 +291,7 @@ object HubContract : SmartContract() {
    private fun ScriptHash.wallet_setReservationPaidToRecipientTxHash(recipient: ScriptHash, value: BigInteger,
                                                                      txHash: Hash256): Boolean {
       Runtime.notify("CL:DBG:setReservationPaidToRecipientTxHash")
-      val reservations = this.wallet_getReservations()
+      val reservations = this.wallet_getFundReservations()
       val matchIdx = reservations.res_findBy(value, recipient)
       if (matchIdx > -1) {
          val matchedRes = reservations.res_getAt(matchIdx)
@@ -321,20 +327,26 @@ object HubContract : SmartContract() {
       return true
    }
 
-   private fun ScriptHash.wallet_getReservations(): ByteArray {
-      val key = this.wallet_getReservationsStorageKey()
+   private fun ScriptHash.wallet_getFundReservations(): ByteArray {
+      val key = this.wallet_getFundReservationsStorageKey()
       val reservations = Storage.get(Storage.currentContext(), key)
       return reservations
    }
 
-   private fun ScriptHash.wallet_storeReservations(resList: ReservationList) {
-      val key = this.wallet_getReservationsStorageKey()
+   private fun ScriptHash.wallet_storeFundReservations(resList: ReservationList) {
+      val key = this.wallet_getFundReservationsStorageKey()
       Storage.put(Storage.currentContext(), key, resList)
    }
 
-   private fun ScriptHash.wallet_clearReservations() {
-      val key = this.wallet_getReservationsStorageKey()
+   private fun ScriptHash.wallet_clearFundReservations() {
+      val key = this.wallet_getFundReservationsStorageKey()
       Storage.delete(Storage.currentContext(), key)
+   }
+
+   private fun ScriptHash.wallet_getFundReservationsStorageKey(): ByteArray {
+      val suffix = byteArrayOf(0)
+      val combined = this.concat(suffix)
+      return combined
    }
 
    private fun ScriptHash.wallet_getReputation(): BigInteger {
@@ -355,20 +367,14 @@ object HubContract : SmartContract() {
       this.wallet_storeReputation(newRep)
    }
 
-   private fun ScriptHash.wallet_getStateStorageKey(): ByteArray {
-      return this
-   }
-
-   private fun ScriptHash.wallet_getReservationsStorageKey(): ByteArray {
-      val suffix = byteArrayOf(0)
-      val combined = this.concat(suffix)
-      return combined
-   }
-
    private fun ScriptHash.wallet_getReputationStorageKey(): ByteArray {
       val suffix = byteArrayOf(1)
       val combined = this.concat(suffix)
       return combined
+   }
+
+   private fun ScriptHash.wallet_getStateStorageKey(): ByteArray {
+      return this
    }
 
    // -==================-
@@ -522,75 +528,71 @@ object HubContract : SmartContract() {
 
    private fun Demand.demand_store(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160): Boolean {
       Runtime.notify("CL:DBG:Demand.store")
-      if (owner.wallet_canOpenDemandOrTravel()) {
-         Runtime.notify("CL:DBG:StoringDemand")
 
-         // store the demand object (state lock)
-         Storage.put(Storage.currentContext(), owner, this)
+      // store the demand object (state lock)
+      Storage.put(Storage.currentContext(), owner, this)
 
-         // store the demand object (cities key)
-         val cityHashPair = pickUpCityHash.concat(dropOffCityHash)
-         val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
-         val demandsForCity = Storage.get(Storage.currentContext(), cityHashPairKeyD)
-         val newDemandsForCity = demandsForCity.concat(this)
-         Storage.put(Storage.currentContext(), cityHashPairKeyD, newDemandsForCity)
-         Runtime.notify("CL:OK:StoredDemand", cityHashPair)
+      // store the demand object (cities key)
+      val cityHashPair = pickUpCityHash.concat(dropOffCityHash)
+      val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
+      val demandsForCity = Storage.get(Storage.currentContext(), cityHashPairKeyD)
+      val newDemandsForCity = demandsForCity.concat(this)
+      Storage.put(Storage.currentContext(), cityHashPairKeyD, newDemandsForCity)
+      Runtime.notify("CL:OK:StoredDemand", cityHashPair)
 
-         // find a travel object to match this demand with
-         val cityHashPairKeyT = cityHashPair.travel_getStorageKey()
-         val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyT)
+      // find a travel object to match this demand with
+      val cityHashPairKeyT = cityHashPair.travel_getStorageKey()
+      val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyT)
 
-         // no travels available! no match can be made yet
-         if (travelsForCityPair.isEmpty()) {
-            Runtime.notify("CL:DBG:NoMatchableTravelForDemand:1")
+      // no travels available! no match can be made yet
+      if (travelsForCityPair.isEmpty()) {
+         Runtime.notify("CL:DBG:NoMatchableTravelForDemand:1")
+         // reserve the item's value and fee (no match yet, reserve for later)
+         this.demand_reserveValueAndFee(owner)
+         Runtime.notify("CL:OK:ReservedDemandValueAndFee:1")
+      }
+
+      // random compiler errors made the below messy and split this if. it's not my fault :)
+      // we have matches! walk through the travels, find one that is appropriate to match
+      if (! travelsForCityPair.isEmpty()) {
+         val matchKey = this.demand_getMatchKey()
+         val repRequired = this.demand_getRepRequired()
+         val carrySpaceRequired = this.demand_getItemSize()
+         val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+         val matchedTravel = travelsForCityPair.travels_findMatchableTravel(repRequired, carrySpaceRequired, nowTime)
+         if (matchedTravel.isEmpty()) {  // no match
+            Runtime.notify("CL:DBG:NoMatchableTravelForDemand:2")
             // reserve the item's value and fee (no match yet, reserve for later)
             this.demand_reserveValueAndFee(owner)
-            Runtime.notify("CL:OK:ReservedDemandValueAndFee:1")
+            Runtime.notify("CL:OK:ReservedDemandValueAndFee:2")
+         } else {
+            // match demand -> travel
+            val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
+            val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
+            val timestampedMatch = matchedTravel.concat(nowTimeBytes)
+            Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
+
+            // match travel -> demand
+            val otherMatchKey = matchedTravel.travel_getMatchKey()
+            val timestampedOtherMatch = this.concat(nowTimeBytes)
+            Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
+
+            Runtime.notify("CL:OK:MatchedDemandWithTravel")
+
+            // clear existing reserved funds
+            // (this is ok to do as an account may only have one demand or travel active at any one time)
+            owner.wallet_clearFundReservations()
+
+            // reserve the item's value and fee
+            // since we found a matchable travel we can set the recipient script hash in the reservation
+            this.demand_reserveValueAndFee(owner, matchedTravel)
+
+            Runtime.notify("CL:OK:ReservedDemandValueAndFee:3")
          }
-
-         // random compiler errors made the below messy and split this if. it's not my fault :)
-         // we have matches! walk through the travels, find one that is appropriate to match
-         if (! travelsForCityPair.isEmpty()) {
-            val matchKey = this.demand_getMatchKey()
-            val repRequired = this.demand_getRepRequired()
-            val carrySpaceRequired = this.demand_getItemSize()
-            val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-            val matchedTravel = travelsForCityPair.travels_findMatchableTravel(repRequired, carrySpaceRequired, nowTime)
-            if (matchedTravel.isEmpty()) {  // no match
-               Runtime.notify("CL:DBG:NoMatchableTravelForDemand:2")
-               // reserve the item's value and fee (no match yet, reserve for later)
-               this.demand_reserveValueAndFee(owner)
-               Runtime.notify("CL:OK:ReservedDemandValueAndFee:2")
-            } else {
-               // match demand -> travel
-               val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
-               val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
-               val timestampedMatch = matchedTravel.concat(nowTimeBytes)
-               Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
-
-               // match travel -> demand
-               val otherMatchKey = matchedTravel.travel_getMatchKey()
-               val timestampedOtherMatch = this.concat(nowTimeBytes)
-               Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
-
-               Runtime.notify("CL:OK:MatchedDemandWithTravel")
-
-               // clear existing reserved funds
-               // (this is ok to do as an account may only have one demand or travel active at any one time)
-               owner.wallet_clearReservations()
-
-               // reserve the item's value and fee
-               // since we found a matchable travel we can set the recipient script hash in the reservation
-               this.demand_reserveValueAndFee(owner, matchedTravel)
-
-               Runtime.notify("CL:OK:ReservedDemandValueAndFee:3")
-            }
-         }
-
-         Runtime.notify("CL:RET:Demand.store")
-         return true
       }
-      return false
+
+      Runtime.notify("CL:RET:Demand.store")
+      return true
    }
 
    private fun DemandList.demands_getAt(index: Int): Travel {
@@ -610,6 +612,37 @@ object HubContract : SmartContract() {
       val itemValue = this.demand_getItemValue().toLong()
       val toReserve = itemValue + FEE_DEMAND_REWARD
       owner.wallet_reserveFunds(expiry, BigInteger.valueOf(toReserve))
+   }
+
+   private fun DemandList.demands_findMatchableDemand(repRequired: BigInteger, carrySpaceAvailable: BigInteger,
+                                                      nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp()): Demand {
+      val nil = byteArrayOf()
+      if (this.isEmpty())
+         return nil
+      val count = this.size / DEMAND_SIZE
+      var i = 0
+      while (i < count) {
+         val demand = this.demands_getAt(i)
+         val expiryBytes = take(demand, TIMESTAMP_SIZE)
+         val expiry = BigInteger(expiryBytes)
+         val owner = demand.demand_getOwnerScriptHash()
+         val itemSize = demand.demand_getItemSize()
+         val ownerRep = owner.wallet_getReputation()
+         if (expiry.toInt() > nowTime &&
+            ownerRep >= repRequired &&
+            carrySpaceAvailable >= itemSize &&
+            ! demand.demand_isMatched())
+            return demand
+         i++
+      }
+      return nil
+   }
+
+   private fun Demand.demand_isMatched(): Boolean {
+      Runtime.notify("CL:DBG:Demand.isMatched")
+      val matchKey = this.demand_getMatchKey()
+      val match = Storage.get(Storage.currentContext(), matchKey)
+      return !match.isEmpty()
    }
 
    private fun Demand.demand_getExpiry(): BigInteger {
@@ -657,37 +690,6 @@ object HubContract : SmartContract() {
       return key
    }
 
-   private fun Demand.demand_isMatched(): Boolean {
-      Runtime.notify("CL:DBG:Demand.isMatched")
-      val matchKey = this.demand_getMatchKey()
-      val match = Storage.get(Storage.currentContext(), matchKey)
-      return !match.isEmpty()
-   }
-
-   private fun DemandList.demands_findMatchableDemand(repRequired: BigInteger, carrySpaceAvailable: BigInteger,
-                                                      nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp()): Demand {
-      val nil = byteArrayOf()
-      if (this.isEmpty())
-         return nil
-      val count = this.size / DEMAND_SIZE
-      var i = 0
-      while (i < count) {
-         val demand = this.demands_getAt(i)
-         val expiryBytes = take(demand, TIMESTAMP_SIZE)
-         val expiry = BigInteger(expiryBytes)
-         val owner = demand.demand_getOwnerScriptHash()
-         val itemSize = demand.demand_getItemSize()
-         val ownerRep = owner.wallet_getReputation()
-         if (expiry.toInt() > nowTime &&
-               ownerRep >= repRequired &&
-               carrySpaceAvailable >= itemSize &&
-               ! demand.demand_isMatched())
-            return demand
-         i++
-      }
-      return nil
-   }
-
    // -============-
    // -=  Travel  =-
    // -============-
@@ -714,80 +716,75 @@ object HubContract : SmartContract() {
 
    private fun Travel.travel_store(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160): Boolean {
       Runtime.notify("CL:DBG:Travel.store")
-      if (owner.wallet_canOpenDemandOrTravel()) {
-         Runtime.notify("CL:DBG:StoringTravel")
 
-         // store the travel object (state lock)
-         Storage.put(Storage.currentContext(), owner, this)
+      // store the travel object (state lock)
+      Storage.put(Storage.currentContext(), owner, this)
 
+      // store the travel object (cities key)
+      val cityHashPair = pickUpCityHash.concat(dropOffCityHash)
+      val cityHashPairKey = cityHashPair.travel_getStorageKey()
+      val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKey)
+      val newTravelsForCityPair = travelsForCityPair.concat(this)
+      Storage.put(Storage.currentContext(), cityHashPairKey, newTravelsForCityPair)
 
-         // store the travel object (cities key)
-         val cityHashPair = pickUpCityHash.concat(dropOffCityHash)
-         val cityHashPairKey = cityHashPair.travel_getStorageKey()
-         val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKey)
-         val newTravelsForCityPair = travelsForCityPair.concat(this)
-         Storage.put(Storage.currentContext(), cityHashPairKey, newTravelsForCityPair)
+      Runtime.notify("CL:OK:StoredTravel", cityHashPair)
 
-         Runtime.notify("CL:OK:StoredTravel", cityHashPair)
+      // clear existing reserved funds
+      // (this is ok to do as an account may only have one demand or travel active at any one time)
+      owner.wallet_clearFundReservations()
 
-         // clear existing reserved funds
-         // (this is ok to do as an account may only have one demand or travel active at any one time)
-         owner.wallet_clearReservations()
+      // reserve the security deposit
+      // it's here because the compiler doesn't like it being below the following block
+      this.travel_reserveDeposit(owner)
 
-         // reserve the security deposit
-         // it's here because the compiler doesn't like it being below the following block
-         this.travel_reserveDeposit(owner)
+      Runtime.notify("CL:OK:ReservedTravelDeposit", cityHashPair)
 
-         Runtime.notify("CL:OK:ReservedTravelDeposit", cityHashPair)
+      // find a demand object to match this travel with
+      val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
+      val demandsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyD)
+      if (! demandsForCityPair.isEmpty()) {
+         val matchKey = this.travel_getMatchKey()
+         val repRequired = this.travel_getRepRequired()
+         val carrySpaceAvailable = this.travel_getCarrySpace()
+         val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+         val matchedDemand = demandsForCityPair.demands_findMatchableDemand(repRequired, carrySpaceAvailable, nowTime)
+         if (! matchedDemand.isEmpty()) {
+            // match travel -> demand
+            val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
+            val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
+            val timestampedMatch = nowTimeBytes.concat(matchedDemand)
+            Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
 
-         // find a demand object to match this travel with
-         val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
-         val demandsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyD)
-         if (! demandsForCityPair.isEmpty()) {
-            val matchKey = this.travel_getMatchKey()
-            val repRequired = this.travel_getRepRequired()
-            val carrySpaceAvailable = this.travel_getCarrySpace()
-            val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-            val matchedDemand = demandsForCityPair.demands_findMatchableDemand(repRequired, carrySpaceAvailable, nowTime)
-            if (! matchedDemand.isEmpty()) {
-               // match travel -> demand
-               val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
-               val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
-               val timestampedMatch = nowTimeBytes.concat(matchedDemand)
-               Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
+            // match demand -> travel
+            val otherMatchKey = matchedDemand.demand_getMatchKey()
+            val timestampedOtherMatch = this.concat(nowTimeBytes)
+            Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
 
-               // match demand -> travel
-               val otherMatchKey = matchedDemand.demand_getMatchKey()
-               val timestampedOtherMatch = this.concat(nowTimeBytes)
-               Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
+            Runtime.notify("CL:OK:MatchedTravelWithDemand")
 
-               Runtime.notify("CL:OK:MatchedTravelWithDemand")
-
-               // rewrite the reservation that was created with the matched demand
-               // this means that we inject the traveller's script hash as the "recipient" of the reserved funds
-               // when a transaction to withdraw the funds is received (multi-sig) the destination wallet must match this one
-               val demandOwner = matchedDemand.demand_getOwnerScriptHash()
-               val demandValue = matchedDemand.demand_getItemValue()
-               val ownerReservationList = demandOwner.wallet_getReservations()
-               val reservationAtIdx = ownerReservationList.res_findBy(demandValue)
-               if (reservationAtIdx > 0) {
-                  val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
-                  demandOwner.wallet_storeReservations(rewrittenReservationList)
-                  Runtime.notify("CL:OK:RewroteDemandFundsReservation")
-               } else {
-                  Runtime.notify("CL:ERR:ReservationForDemandNotFound")
-               }
+            // rewrite the reservation that was created with the matched demand
+            // this means that we inject the traveller's script hash as the "recipient" of the reserved funds
+            // when a transaction to withdraw the funds is received (multi-sig) the destination wallet must match this one
+            val demandOwner = matchedDemand.demand_getOwnerScriptHash()
+            val demandValue = matchedDemand.demand_getItemValue()
+            val ownerReservationList = demandOwner.wallet_getFundReservations()
+            val reservationAtIdx = ownerReservationList.res_findBy(demandValue)
+            if (reservationAtIdx > 0) {
+               val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
+               demandOwner.wallet_storeFundReservations(rewrittenReservationList)
+               Runtime.notify("CL:OK:RewroteDemandFundsReservation")
             } else {
-               Runtime.notify("CL:DBG:NoMatchableDemandForTravel:1")
+               Runtime.notify("CL:ERR:ReservationForDemandNotFound")
             }
          } else {
-            Runtime.notify("CL:DBG:NoMatchableDemandForTravel:2")
+            Runtime.notify("CL:DBG:NoMatchableDemandForTravel:1")
          }
-
-         Runtime.notify("CL:RET:Travel.store")
-         return true
+      } else {
+         Runtime.notify("CL:DBG:NoMatchableDemandForTravel:2")
       }
-      return false
+
+      Runtime.notify("CL:RET:Travel.store")
+      return true
    }
 
    private fun TravelList.travels_getAt(index: Int): Travel {
@@ -797,6 +794,36 @@ object HubContract : SmartContract() {
    private fun Travel.travel_reserveDeposit(owner: ScriptHash) {
       val expiry = this.travel_getExpiry()
       owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT))
+   }
+
+   private fun TravelList.travels_findMatchableTravel(repRequired: BigInteger, carrySpaceRequired: BigInteger, nowTime: Int): Travel {
+      val nil = byteArrayOf()
+      if (this.isEmpty())
+         return nil
+      val count = this.size / TRAVEL_SIZE
+      var i = 0
+      while (i < count) {
+         val travel = this.travels_getAt(i)
+         val expiryBytes = take(travel, TIMESTAMP_SIZE)
+         val expiry = BigInteger(expiryBytes)
+         val owner = this.travel_getOwnerScriptHash()
+         val carrySpaceAvailable = this.travel_getCarrySpace()
+         val ownerRep = owner.wallet_getReputation()
+         if (expiry.toInt() > nowTime &&
+            ownerRep >= repRequired &&
+            carrySpaceAvailable >= carrySpaceRequired &&
+            ! travel.travel_isMatched())
+            return travel
+         i++
+      }
+      return nil
+   }
+
+   private fun Travel.travel_isMatched(): Boolean {
+      Runtime.notify("CL:DBG:Travel.isMatched")
+      val matchKey = this.travel_getMatchKey()
+      val match = Storage.get(Storage.currentContext(), matchKey)
+      return !match.isEmpty()
    }
 
    private fun Travel.travel_getExpiry(): BigInteger {
@@ -832,36 +859,6 @@ object HubContract : SmartContract() {
 
    private fun Travel.travel_getMatchKey(): ByteArray {
       return this
-   }
-
-   private fun Travel.travel_isMatched(): Boolean {
-      Runtime.notify("CL:DBG:Travel.isMatched")
-      val matchKey = this.travel_getMatchKey()
-      val match = Storage.get(Storage.currentContext(), matchKey)
-      return !match.isEmpty()
-   }
-
-   private fun TravelList.travels_findMatchableTravel(repRequired: BigInteger, carrySpaceRequired: BigInteger, nowTime: Int): Travel {
-      val nil = byteArrayOf()
-      if (this.isEmpty())
-         return nil
-      val count = this.size / TRAVEL_SIZE
-      var i = 0
-      while (i < count) {
-         val travel = this.travels_getAt(i)
-         val expiryBytes = take(travel, TIMESTAMP_SIZE)
-         val expiry = BigInteger(expiryBytes)
-         val owner = this.travel_getOwnerScriptHash()
-         val carrySpaceAvailable = this.travel_getCarrySpace()
-         val ownerRep = owner.wallet_getReputation()
-         if (expiry.toInt() > nowTime &&
-               ownerRep >= repRequired &&
-               carrySpaceAvailable >= carrySpaceRequired &&
-               ! travel.travel_isMatched())
-            return travel
-         i++
-      }
-      return nil
    }
 
    // -=================-

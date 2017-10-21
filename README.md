@@ -29,3 +29,5 @@ Run `make test` (the easy way) or
 ## Generating the docs
 
 [Dokka](https://github.com/Kotlin/dokka) is used to generate the docs as an HTML site. Run `make docs` to generate the pages and then look in `target/dokka/chainline-contracts`.
+
+A snapshot of the docs is accessible [via GitHub Pages](https://notatestuser.github.io/chainline-contracts-kt).

@@ -102,12 +102,12 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          var reservations = new byte[] {
-            // entry 1
+            // entry 0
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
             0,  // false
-            // entry 2
+            // entry 1
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
@@ -131,12 +131,12 @@ namespace CLTests {
          ExecutionEngine engine = LoadContract("HubContract");
 
          var reservations = new byte[] {
-            // entry 1
+            // entry 0
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
             0,  // false
-            // entry 2
+            // entry 1
             0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
@@ -153,6 +153,134 @@ namespace CLTests {
 
          var result = engine.EvaluationStack.Peek().GetBigInteger();
          Assert.Equal(10, result);
+      }
+
+      [Fact]
+      public void TestReservationFindBy() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         var reservations = new byte[] {
+            // entry 0
+            0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
+            0,  // false
+            // entry 1
+            0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
+            20, 0, 0, 0, 0,  // value is 5 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            0,  // false
+            // entry 2
+            0x02, 0x00, 0x00, 0x00, // timestamp is 4 bytes
+            30, 0, 0, 0, 0,  // value is 5 bytes
+            1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
+            0,  // false
+         };
+
+         var findByRecipient = new byte[] {
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+         };
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(findByRecipient);  // args[2]
+            sb.EmitPush(20);  // args[1]
+            sb.EmitPush(reservations);  // args[0]
+            sb.EmitPush(3);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_reservation_findBy");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetBigInteger();
+         Assert.Equal(1, result);
+      }
+
+      [Fact]
+      public void TestReservationFindByNotFound() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         var reservations = new byte[] {
+            // entry 0
+            0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
+            0,  // false
+            // entry 1
+            0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
+            20, 0, 0, 0, 0,  // value is 5 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            0,  // false
+            // entry 2
+            0x02, 0x00, 0x00, 0x00, // timestamp is 4 bytes
+            30, 0, 0, 0, 0,  // value is 5 bytes
+            1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
+            0,  // false
+         };
+
+         var findByRecipient = new byte[] {
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+         };
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(findByRecipient);  // args[2]
+            sb.EmitPush(25);  // args[1]
+            sb.EmitPush(reservations);  // args[0]
+            sb.EmitPush(3);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_reservation_findBy");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetBigInteger();
+         Assert.Equal(-1, result);
+      }
+
+      [Fact]
+      public void TestReservationReplaceRecipient() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         var reservations = new byte[] {
+            // entry 0
+            0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            0,  // false
+            // entry 1
+            0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            0,  // false
+         };
+
+         var newRecipient = new byte[] {
+            1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5
+         };
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(newRecipient);  // args[2]
+            sb.EmitPush(1);  // args[1]
+            sb.EmitPush(reservations);  // args[0]
+            sb.EmitPush(3);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_reservation_replaceRecipientAt");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var expected = new byte[] {
+            // entry 0
+            0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            0,  // false
+            // entry 1
+            0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
+            0,  // false
+         };
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(expected, result);
       }
    }
 }

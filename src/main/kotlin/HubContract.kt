@@ -86,6 +86,10 @@ object HubContract : SmartContract() {
             return args[0].res_isMultiSigUnlocked()
          if (operation == "test_reservation_getTotalOnHoldValue")
             return args[0].res_getTotalOnHoldGasValue(1, true)
+         if (operation == "test_reservation_findBy")
+            return args[0].res_findBy(BigInteger(args[1]), args[2])
+         if (operation == "test_reservation_replaceRecipientAt")
+            return args[0].res_replaceRecipientAt((args[1] as Int?)!!, args[2])
          if (operation == "test_demand_getItemValue")
             return args[0].demand_getItemValue()
          if (operation == "test_demand_getInfoBlob")
@@ -425,7 +429,7 @@ object HubContract : SmartContract() {
       val skipCount = idx * RESERVATION_SIZE
       val before = range(this, 0, skipCount + TIMESTAMP_SIZE + VALUE_SIZE)
       val restIdx = skipCount + SCRIPT_HASH_SIZE + 1
-      val after = range(restIdx, this.size - restIdx)
+      val after = range(restIdx, (items - idx - 1) * RESERVATION_SIZE)
       val newList = before
             .concat(recipient)
             .concat(falseBytes)
@@ -442,7 +446,7 @@ object HubContract : SmartContract() {
       var total: Long = 0
       while (i < count) {
          val reservation = this.res_getAt(i)
-         if (assumeUnpaid || !reservation.res_wasPaidToRecipient()) {
+         if (assumeUnpaid || ! reservation.res_wasPaidToRecipient()) {
             val expiryBytes = take(reservation, TIMESTAMP_SIZE)
             val expiry = BigInteger(expiryBytes)
             if (expiry.toInt() > nowTime) {
@@ -853,7 +857,7 @@ object HubContract : SmartContract() {
          if (expiry.toInt() > nowTime &&
                ownerRep >= repRequired &&
                carrySpaceAvailable >= carrySpaceRequired &&
-               !travel.travel_isMatched())
+               ! travel.travel_isMatched())
             return travel
          i++
       }

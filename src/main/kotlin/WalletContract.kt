@@ -17,6 +17,11 @@ object WalletContract : SmartContract() {
 	@Appcall("30a2b04139d714564eb956896498616cf8acc8db")
 	private external fun HubContract(operation: String, vararg args: Any): Boolean
 
+   /**
+    * The entry point of the smart contract.
+    * @param operation The method to run, specified as a string.
+    * @param args A variable length array of arguments provided to the method.
+    */
    fun Main(signature: ByteArray): Boolean {
       // The account owner's public key
       // Included in at wallet creation time
@@ -38,7 +43,7 @@ object WalletContract : SmartContract() {
          return false
 
       // Verify the tx against the wallet owner's pubkey
-      if (!verifySignature(signature, ownerPubKey))
+      if (! verifySignature(signature, ownerPubKey))
          return false
 
       // Check that the assetId is GAS

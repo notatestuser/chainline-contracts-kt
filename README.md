@@ -16,7 +16,7 @@ The smart contracts powering Chain Line are written in Kotlin for the [Neo](http
 
 Compiled contract avm files may be found in the root directory of the project.
 
-> Note: You might have to put `org.neo.smartcontract.framework.jar` somewhere where dotnet can find it (try your PATH or `/usr/local/share/dotnet`). You can build the jar by running `mvn install` in `vendor/neo-devpack-java`. It will be created in `target/`.
+> Note: You might have to put `org.neo.smartcontract.framework.jar` somewhere dotnet can find it (try your PATH or `/usr/local/share/dotnet`). You can build the jar by running `mvn install` in `vendor/neo-devpack-java`. It will be created in `target`.
 
 ## Running the tests
 
@@ -26,3 +26,6 @@ Run `make test` (the easy way) or
 * Open the unit tests project in `./unit-tests/CLTests.sln`
 * Run the tests within the IDE (on a Mac this is done through `View` > `Pads` > `Unit Tests` then click `Run All` in the side pane)
 
+## Generating the docs
+
+[Dokka](https://github.com/Kotlin/dokka) is used to generate the docs as an HTML site. Run `make docs` to generate the pages and then look in `target/dokka/chainline-contracts`.

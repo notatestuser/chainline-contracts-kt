@@ -13,6 +13,7 @@
       <kotlin.version>1.1.51</kotlin.version>
       <kotlin.compiler.jvmTarget>1.8</kotlin.compiler.jvmTarget>
       <junit.version>4.12</junit.version>
+      <dokka.version>0.9.15</dokka.version>
       <main.class>chainline.contracts.HubContract</main.class>
       <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
    </properties>
@@ -103,6 +104,41 @@
                </arguments>
             </configuration>
          </plugin>
+         <plugin>
+            <groupId>org.jetbrains.dokka</groupId>
+            <artifactId>dokka-maven-plugin</artifactId>
+            <version>${dokka.version}</version>
+            <executions>
+               <execution>
+                  <phase>pre-site</phase>
+                  <goals>
+                     <goal>dokka</goal>
+                  </goals>
+               </execution>
+            </executions>
+            <configuration>
+               <jdkVersion>8</jdkVersion>
+               <perPackageOptions>
+                     <packageOptions>
+                        <prefix>chainline</prefix>
+                        <skipDeprecated>false</skipDeprecated>
+                        <reportUndocumented>false</reportUndocumented>
+                        <includeNonPublic>true</includeNonPublic>
+                     </packageOptions>
+               </perPackageOptions>
+            </configuration>
+         </plugin>
       </plugins>
    </build>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>jcenter</id>
+            <name>JCenter</name>
+            <url>https://jcenter.bintray.com/</url>
+            <releases>
+                <enabled>true</enabled>
+            </releases>
+        </pluginRepository>
+    </pluginRepositories>
 </project>

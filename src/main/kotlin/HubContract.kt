@@ -35,7 +35,6 @@ object HubContract : SmartContract() {
    private const val TIMESTAMP_SIZE = 4
    private const val SCRIPT_HASH_SIZE = 20  // 160 bits
    private const val TX_HASH_SIZE = 32  // 256 bits
-   private const val PUBLIC_KEY_SIZE = 32
    private const val REP_REQUIRED_SIZE = 2
    private const val CARRY_SPACE_SIZE = 1
    private const val DEMAND_INFO_SIZE = 128
@@ -108,6 +107,8 @@ object HubContract : SmartContract() {
          return args[0].wallet_validate(args[1])
       if (operation == "wallet_getBalance")
          return args[0].wallet_getBalance()
+      if (operation == "wallet_getReputation")
+         return args[0].wallet_getReputation()
       // if (operation == "wallet_getBalanceOnHold") {
       //    val reservations = Storage.get(Storage.currentContext(), args[0])
       //    if (reservations.isEmpty())
@@ -132,6 +133,12 @@ object HubContract : SmartContract() {
                // reset account states, allow new transactions
                Storage.delete(Storage.currentContext(), args[0])  // reset demand owner state
                Storage.delete(Storage.currentContext(), args[2])  // reset traveller/recipient state
+               args[0].wallet_clearReservations()
+               args[2].wallet_clearReservations()
+
+               // increment account reputation scores
+               args[0].wallet_incrementReputation()
+               args[2].wallet_incrementReputation()
             }
          }
          return false
@@ -148,13 +155,23 @@ object HubContract : SmartContract() {
          val matchKey = args[0].demand_getMatchKey()
          return Storage.get(Storage.currentContext(), matchKey)
       }
+      if (operation == "demand_getTravelMatchedAtTime") {
+         val matchKey = args[0].demand_getMatchKey()
+         val travel = Storage.get(Storage.currentContext(), matchKey)
+         return travel.travel_getMatchedAtTime()
+      }
       if (operation == "travel_getDemandMatch") {
          val matchKey = args[0].travel_getMatchKey()
          return Storage.get(Storage.currentContext(), matchKey)
       }
+      if (operation == "travel_getDemandMatchedAtTime") {
+         val matchKey = args[0].travel_getMatchKey()
+         val demand = Storage.get(Storage.currentContext(), matchKey)
+         return demand.demand_getMatchedAtTime()
+      }
 
       // The following operations can write state
-      if (!Runtime.checkWitness(args[0]))
+      if (! Runtime.checkWitness(args[0]))
          return false
 
       // Demand/travel open
@@ -311,12 +328,41 @@ object HubContract : SmartContract() {
       Storage.put(Storage.currentContext(), key, resList)
    }
 
+   private fun ScriptHash.wallet_clearReservations() {
+      val key = this.wallet_getReservationsStorageKey()
+      Storage.delete(Storage.currentContext(), key)
+   }
+
+   private fun ScriptHash.wallet_getReputation(): BigInteger {
+      val key = this.wallet_getReputationStorageKey()
+      val storedBytes = Storage.get(Storage.currentContext(), key)
+      return BigInteger(storedBytes)
+   }
+
+   private fun ScriptHash.wallet_storeReputation(rep: BigInteger) {
+      val key = this.wallet_getReputationStorageKey()
+      val bytes = rep.toByteArray()
+      Storage.put(Storage.currentContext(), key, bytes)
+   }
+
+   private fun ScriptHash.wallet_incrementReputation() {
+      val rep = this.wallet_getReputation()
+      val newRep = rep + BigInteger.valueOf(1)
+      this.wallet_storeReputation(newRep)
+   }
+
    private fun ScriptHash.wallet_getStateStorageKey(): ByteArray {
       return this
    }
 
    private fun ScriptHash.wallet_getReservationsStorageKey(): ByteArray {
       val suffix = byteArrayOf(0)
+      val combined = this.concat(suffix)
+      return combined
+   }
+
+   private fun ScriptHash.wallet_getReputationStorageKey(): ByteArray {
+      val suffix = byteArrayOf(1)
       val combined = this.concat(suffix)
       return combined
    }
@@ -500,7 +546,7 @@ object HubContract : SmartContract() {
 
          // random compiler errors made the below messy and split this if. it's not my fault :)
          // we have matches! walk through the travels, find one that is appropriate to match
-         if (!travelsForCityPair.isEmpty()) {
+         if (! travelsForCityPair.isEmpty()) {
             val matchKey = this.demand_getMatchKey()
             val repRequired = this.demand_getRepRequired()
             val carrySpaceRequired = this.demand_getItemSize()
@@ -527,7 +573,7 @@ object HubContract : SmartContract() {
 
                // clear existing reserved funds
                // (this is ok to do as an account may only have one demand or travel active at any one time)
-               Storage.delete(Storage.currentContext(), owner)
+               owner.wallet_clearReservations()
 
                // reserve the item's value and fee
                // since we found a matchable travel we can set the recipient script hash in the reservation
@@ -625,8 +671,11 @@ object HubContract : SmartContract() {
          val demand = this.demands_getAt(i)
          val expiryBytes = take(demand, TIMESTAMP_SIZE)
          val expiry = BigInteger(expiryBytes)
+         val owner = demand.demand_getOwnerScriptHash()
          val itemSize = demand.demand_getItemSize()
+         val ownerRep = owner.wallet_getReputation()
          if (expiry.toInt() > nowTime &&
+               ownerRep >= repRequired &&
                carrySpaceAvailable >= itemSize &&
                ! demand.demand_isMatched())
             return demand
@@ -679,7 +728,7 @@ object HubContract : SmartContract() {
 
          // clear existing reserved funds
          // (this is ok to do as an account may only have one demand or travel active at any one time)
-         Storage.delete(Storage.currentContext(), owner)
+         owner.wallet_clearReservations()
 
          // reserve the security deposit
          // it's here because the compiler doesn't like it being below the following block
@@ -690,13 +739,13 @@ object HubContract : SmartContract() {
          // find a demand object to match this travel with
          val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
          val demandsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyD)
-         if (!demandsForCityPair.isEmpty()) {
+         if (! demandsForCityPair.isEmpty()) {
             val matchKey = this.travel_getMatchKey()
             val repRequired = this.travel_getRepRequired()
             val carrySpaceAvailable = this.travel_getCarrySpace()
             val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
             val matchedDemand = demandsForCityPair.demands_findMatchableDemand(repRequired, carrySpaceAvailable, nowTime)
-            if (!matchedDemand.isEmpty()) {
+            if (! matchedDemand.isEmpty()) {
                // match travel -> demand
                val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
                val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
@@ -715,7 +764,6 @@ object HubContract : SmartContract() {
                // when a transaction to withdraw the funds is received (multi-sig) the destination wallet must match this one
                val demandOwner = matchedDemand.demand_getOwnerScriptHash()
                val demandValue = matchedDemand.demand_getItemValue()
-               val demandExpiry = matchedDemand.demand_getExpiry()
                val ownerReservationList = demandOwner.wallet_getReservations()
                val reservationAtIdx = ownerReservationList.res_findBy(demandValue)
                if (reservationAtIdx > 0) {
@@ -799,8 +847,11 @@ object HubContract : SmartContract() {
          val travel = this.travels_getAt(i)
          val expiryBytes = take(travel, TIMESTAMP_SIZE)
          val expiry = BigInteger(expiryBytes)
+         val owner = this.travel_getOwnerScriptHash()
          val carrySpaceAvailable = this.travel_getCarrySpace()
+         val ownerRep = owner.wallet_getReputation()
          if (expiry.toInt() > nowTime &&
+               ownerRep >= repRequired &&
                carrySpaceAvailable >= carrySpaceRequired &&
                !travel.travel_isMatched())
             return travel
@@ -809,9 +860,9 @@ object HubContract : SmartContract() {
       return nil
    }
 
-   // -=============-
-   // -=  Storage  =-
-   // -=============-
+   // -=================-
+   // -=  Init Params  =-
+   // -=================-
 
    private fun getAssetId(): ByteArray {
       //return Storage.get(Storage.currentContext(), "AssetID")

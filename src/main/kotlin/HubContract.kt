@@ -255,14 +255,18 @@ object HubContract : SmartContract() {
       return true
    }
 
-   private fun ScriptHash.wallet_reserveFunds(expiry: BigInteger, value: BigInteger, recipient: ScriptHash): Boolean {
+   private fun ScriptHash.wallet_reserveFunds(expiry: BigInteger, value: BigInteger, recipient: ScriptHash,
+                                              overwrite: Boolean): Boolean {
       val balance = this.wallet_getBalance()
       val toReserve = value.toLong()
       if (balance <= toReserve) {  // insufficient balance
          Runtime.notify("CL:ERR:InsufficientFunds1")
          return false
       }
-      val reservations = Storage.get(Storage.currentContext(), this)
+      var reservations = byteArrayOf()
+      if (! overwrite) {
+         val reservations = Storage.get(Storage.currentContext(), this)
+      }
       val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
       val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
       if (gasOnHold < 0)  // wallet validation failed
@@ -279,10 +283,10 @@ object HubContract : SmartContract() {
       return true
    }
 
-   private fun ScriptHash.wallet_reserveFunds(expiry: BigInteger, value: BigInteger): Boolean {
+   private fun ScriptHash.wallet_reserveFunds(expiry: BigInteger, value: BigInteger, overwrite: Boolean): Boolean {
       // argh, the compiler strikes again
       val emptyScriptHash = byteArrayOf(0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0)
-      val ret = this.wallet_reserveFunds(expiry, value, emptyScriptHash)
+      val ret = this.wallet_reserveFunds(expiry, value, emptyScriptHash, overwrite)
       return ret
    }
 
@@ -548,12 +552,15 @@ object HubContract : SmartContract() {
          val matchKey = this.demand_getMatchKey()
          val repRequired = this.demand_getRepRequired()
          val carrySpaceRequired = this.demand_getItemSize()
+
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
          val matchedTravel = travelsForCityPair.travels_findMatchableTravel(repRequired, carrySpaceRequired, nowTime)
          if (matchedTravel.isEmpty()) {  // no match
             Runtime.notify("CL:DBG:NoMatchableTravelForDemand:2")
+
             // reserve the item's value and fee (no match yet, reserve for later)
             this.demand_reserveValueAndFee(owner)
+
             Runtime.notify("CL:OK:ReservedDemandValueAndFee:2")
          } else {
             // match demand -> travel
@@ -569,12 +576,9 @@ object HubContract : SmartContract() {
 
             Runtime.notify("CL:OK:MatchedDemandWithTravel")
 
-            // clear existing reserved funds
-            // (this is ok to do as an account may only have one demand or travel active at any one time)
-            owner.wallet_clearFundReservations()
-
             // reserve the item's value and fee
-            // since we found a matchable travel we can set the recipient script hash in the reservation
+            // this will overwrite existing fund reservations for this wallet
+            // since we found a matchable travel we can set the recipient's script hash in the reservation (matchedTravel)
             this.demand_reserveValueAndFee(owner, matchedTravel)
 
             Runtime.notify("CL:OK:ReservedDemandValueAndFee:3")
@@ -594,14 +598,14 @@ object HubContract : SmartContract() {
       val itemValue = this.demand_getItemValue().toLong()
       val toReserve = itemValue + FEE_DEMAND_REWARD
       val travellerScriptHash = matchedTravel.travel_getOwnerScriptHash()
-      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(toReserve), travellerScriptHash)
+      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(toReserve), travellerScriptHash, true)
    }
 
    private fun Demand.demand_reserveValueAndFee(owner: ScriptHash) {
       val expiry = this.demand_getExpiry()
       val itemValue = this.demand_getItemValue().toLong()
       val toReserve = itemValue + FEE_DEMAND_REWARD
-      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(toReserve))
+      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(toReserve), true)
    }
 
    private fun DemandList.demands_findMatchableDemand(repRequired: BigInteger, carrySpaceAvailable: BigInteger,
@@ -719,11 +723,8 @@ object HubContract : SmartContract() {
 
       Runtime.notify("CL:OK:StoredTravel", cityHashPair)
 
-      // clear existing reserved funds
-      // (this is ok to do as an account may only have one demand or travel active at any one time)
-      owner.wallet_clearFundReservations()
-
       // reserve the security deposit
+      // this will overwrite existing fund reservations for this wallet
       // it's here because the compiler doesn't like it being below the following block
       this.travel_reserveDeposit(owner)
 
@@ -736,6 +737,7 @@ object HubContract : SmartContract() {
          val matchKey = this.travel_getMatchKey()
          val repRequired = this.travel_getRepRequired()
          val carrySpaceAvailable = this.travel_getCarrySpace()
+
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
          val matchedDemand = demandsForCityPair.demands_findMatchableDemand(repRequired, carrySpaceAvailable, nowTime)
          if (! matchedDemand.isEmpty()) {
@@ -762,6 +764,7 @@ object HubContract : SmartContract() {
             if (reservationAtIdx > 0) {
                val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
                demandOwner.wallet_storeFundReservations(rewrittenReservationList)
+
                Runtime.notify("CL:OK:RewroteDemandFundsReservation")
             } else {
                Runtime.notify("CL:ERR:ReservationForDemandNotFound")
@@ -783,7 +786,7 @@ object HubContract : SmartContract() {
 
    private fun Travel.travel_reserveDeposit(owner: ScriptHash) {
       val expiry = this.travel_getExpiry()
-      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT))
+      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT), true)
    }
 
    private fun TravelList.travels_findMatchableTravel(repRequired: BigInteger, carrySpaceRequired: BigInteger, nowTime: Int): Travel {

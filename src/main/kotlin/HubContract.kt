@@ -178,16 +178,18 @@ object HubContract : SmartContract() {
 
       // Demand/travel open
       if (operation == "demand_open") {
-         if (args[0].wallet_canOpenDemandOrTravel()) {
-            val demand = demand_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), args[5])
-            return demand.demand_store(args[0], args[6], args[7])
+         if (args[0].wallet_validate(args[1]) &&
+               args[0].wallet_canOpenDemandOrTravel()) {
+            val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6])
+            return demand.demand_store(args[0], args[7], args[8])
          }
          return false
       }
       if (operation == "travel_open") {
-         if (args[0].wallet_canOpenDemandOrTravel()) {
-            val travel = travel_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]))
-            return travel.travel_store(args[0], args[4], args[5])
+         if (args[0].wallet_validate(args[1]) &&
+               args[0].wallet_canOpenDemandOrTravel()) {
+            val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]))
+            return travel.travel_store(args[0], args[5], args[6])
          }
          return false
       }

@@ -30,11 +30,11 @@ namespace CLTests {
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(Info);  // args[5] - info
-            sb.EmitPush(ScriptHash);  // args[4] - ownerScriptHash
-            sb.EmitPush(100000000);  // args[3] - itemValue
-            sb.EmitPush(1);  // args[2] - itemSize
-            sb.EmitPush(2);  // args[1] - repRequired
-            sb.EmitPush(1);  // args[0] - expiry
+            sb.EmitPush(100000000);  // args[4] - itemValue
+            sb.EmitPush(1);  // args[3] - itemSize
+            sb.EmitPush(2);  // args[2] - repRequired
+            sb.EmitPush(1);  // args[1] - expiry
+            sb.EmitPush(ScriptHash);  // args[0] - owner
             sb.EmitPush(6);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_demand_create");  // operation
@@ -70,11 +70,11 @@ namespace CLTests {
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(Info);  // args[5] - info
-            sb.EmitPush(ScriptHash);  // args[4] - ownerScriptHash
-            sb.EmitPush(550000000000);  // args[3] - itemValue
-            sb.EmitPush(1);  // args[2] - itemSize
-            sb.EmitPush(1);  // args[1] - repRequired
-            sb.EmitPush(1);  // args[0] - expiry
+            sb.EmitPush(550000000000);  // args[4] - itemValue
+            sb.EmitPush(1);  // args[3] - itemSize
+            sb.EmitPush(1);  // args[2] - repRequired
+            sb.EmitPush(1);  // args[1] - expiry
+            sb.EmitPush(ScriptHash);  // args[0] - owner
             sb.EmitPush(6);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_demand_create");  // operation
@@ -93,11 +93,11 @@ namespace CLTests {
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(Info);  // args[5] - info
-            sb.EmitPush(ScriptHash);  // args[4] - ownerScriptHash
-            sb.EmitPush(100000000);  // args[3] - itemValue
-            sb.EmitPush(128);  // args[2] - itemSize (max is 127)
-            sb.EmitPush(1);  // args[1] - repRequired
-            sb.EmitPush(1);  // args[0] - expiry
+            sb.EmitPush(100000000);  // args[4] - itemValue
+            sb.EmitPush(128);  // args[3] - itemSize (max is 127)
+            sb.EmitPush(1);  // args[2] - repRequired
+            sb.EmitPush(1);  // args[1] - expiry
+            sb.EmitPush(ScriptHash);  // args[0] - owner
             sb.EmitPush(6);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_demand_create");  // operation

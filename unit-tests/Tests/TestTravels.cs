@@ -21,10 +21,10 @@ namespace CLTests {
          //                            repRequired: BigInteger, carrySpace: BigInteger): Travel {
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(ScriptHash);  // args[3] - ownerScriptHash
-            sb.EmitPush(2);  // args[2] - carrySpace
-            sb.EmitPush(1);  // args[1] - repRequired
-            sb.EmitPush(1);  // args[0] - expiry
+            sb.EmitPush(2);  // args[3] - carrySpace
+            sb.EmitPush(1);  // args[2] - repRequired
+            sb.EmitPush(1);  // args[1] - expiry
+            sb.EmitPush(ScriptHash);  // args[0] - owner
             sb.EmitPush(4);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_travel_create");  // operation
@@ -52,10 +52,10 @@ namespace CLTests {
          // failure case: carrySpace is too high below.
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(ScriptHash);  // args[3] - ownerScriptHash
-            sb.EmitPush(128);  // args[2] - carrySpace
-            sb.EmitPush(1);  // args[1] - repRequired
-            sb.EmitPush(1);  // args[0] - expiry
+            sb.EmitPush(128);  // args[3] - carrySpace
+            sb.EmitPush(1);  // args[2] - repRequired
+            sb.EmitPush(1);  // args[1] - expiry
+            sb.EmitPush(ScriptHash);  // args[0] - owner
             sb.EmitPush(4);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_travel_create");  // operation

@@ -1,4 +1,5 @@
-﻿using Neo.VM;
+﻿using System;
+using Neo.VM;
 using Xunit;
 using Xunit.Abstractions;
 
@@ -26,52 +27,7 @@ namespace CLTests {
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             0xFF, 0xFF, 0xFF, 0x7F, 0,  // value is 5 bytes
             1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
-            0,  // false
          }, result);
-      }
-
-      [Fact]
-      public void TestGetAttribute() {
-         ExecutionEngine engine = LoadContract("HubContract");
-
-         using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] {
-               0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
-               0xFF, 0xFF, 0xFF, 0x7F, 0,  // value is 5 bytes
-               5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-               1,  // true
-            });
-            sb.EmitPush(1);
-            sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_reservation_isMultiSigUnlocked");  // operation
-            ExecuteScript(engine, sb);
-         }
-
-         var result = engine.EvaluationStack.Peek().GetBoolean();
-
-         Assert.True(result);
-      }
-
-      [Fact]
-      public void TestGetAttribute2() {
-         ExecutionEngine engine = LoadContract("HubContract");
-
-         using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] {
-               0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
-               0xFF, 0xFF, 0xFF, 0x7F, 0,  // value is 5 bytes
-               5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-               0,  // true
-            });
-            sb.EmitPush(1);
-            sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_reservation_isMultiSigUnlocked");  // operation
-            ExecuteScript(engine, sb);
-         }
-
-         var result = engine.EvaluationStack.Peek().GetBoolean();
-
-         Assert.False(result);
       }
 
       [Fact]
@@ -82,7 +38,6 @@ namespace CLTests {
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             0xFF, 0xFF, 0xFF, 0x7F, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-            0,  // false
          };
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
@@ -98,6 +53,27 @@ namespace CLTests {
       }
 
       [Fact]
+      public void TestGetReservationRecipient() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(new byte[] {
+               0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+               0xFF, 0xFF, 0xFF, 0x7F, 0,  // value is 5 bytes
+               5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            });
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_reservation_getRecipient");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var expected = new byte[] { 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1 };
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(expected, result);
+      }
+
+      [Fact]
       public void TestGetTotalReservationHoldValue() {
          ExecutionEngine engine = LoadContract("HubContract");
 
@@ -106,12 +82,10 @@ namespace CLTests {
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-            0,  // false
             // entry 1
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-            0,  // false
          };
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
@@ -135,12 +109,10 @@ namespace CLTests {
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-            0,  // false
             // entry 1
             0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-            0,  // false
          };
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
@@ -164,17 +136,14 @@ namespace CLTests {
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
-            0,  // false
             // entry 1
             0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
             20, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-            0,  // false
             // entry 2
             0x02, 0x00, 0x00, 0x00, // timestamp is 4 bytes
             30, 0, 0, 0, 0,  // value is 5 bytes
             1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
-            0,  // false
          };
 
          var findByRecipient = new byte[] {
@@ -204,17 +173,14 @@ namespace CLTests {
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
-            0,  // false
             // entry 1
             0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
             20, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-            0,  // false
             // entry 2
             0x02, 0x00, 0x00, 0x00, // timestamp is 4 bytes
             30, 0, 0, 0, 0,  // value is 5 bytes
             1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
-            0,  // false
          };
 
          var findByRecipient = new byte[] {
@@ -244,12 +210,10 @@ namespace CLTests {
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-            0,  // false
             // entry 1
             0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-            0,  // false
          };
 
          var newRecipient = new byte[] {
@@ -271,15 +235,14 @@ namespace CLTests {
             0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
-            0,  // false
             // entry 1
             0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
             10, 0, 0, 0, 0,  // value is 5 bytes
             1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
-            0,  // false
          };
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
+         Output.WriteLine(BitConverter.ToString(result));
          Assert.Equal(expected, result);
       }
    }

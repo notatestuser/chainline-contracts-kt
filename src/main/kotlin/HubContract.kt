@@ -41,7 +41,7 @@ object HubContract : SmartContract() {
 
    // Object sizes
    private const val RESERVATION_SIZE =
-         TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE + 1
+         TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE
    private const val DEMAND_SIZE =
          TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + DEMAND_INFO_SIZE
    private const val TRAVEL_SIZE =
@@ -80,10 +80,8 @@ object HubContract : SmartContract() {
             return args[0].res_getExpiry()
          if (operation == "test_reservation_getValue")
             return args[0].res_getValue()
-         if (operation == "test_reservation_getDestination")
+         if (operation == "test_reservation_getRecipient")
             return args[0].res_getRecipient()
-         if (operation == "test_reservation_isMultiSigUnlocked")
-            return args[0].res_isMultiSigUnlocked()
          if (operation == "test_reservation_getTotalOnHoldValue")
             return args[0].res_getTotalOnHoldGasValue(1, true)
          if (operation == "test_reservation_findBy")
@@ -382,12 +380,10 @@ object HubContract : SmartContract() {
    // -==================-
 
    private fun reservation_create(expiry: BigInteger, value: BigInteger, destination: ScriptHash): Reservation {
-      val falseBytes = byteArrayOf(0)
       // size: 30 bytes
       val reservation = expiry.toByteArray(TIMESTAMP_SIZE)
             .concat(value.toByteArray(VALUE_SIZE))
             .concat(destination)  // script hash, 20 bytes
-            .concat(falseBytes)  // 1 byte
       return reservation
    }
 
@@ -430,15 +426,13 @@ object HubContract : SmartContract() {
    }
 
    private fun ReservationList.res_replaceRecipientAt(idx: Int, recipient: ScriptHash): ReservationList {
-      val falseBytes = byteArrayOf(0)
       val items = this.size / RESERVATION_SIZE
       val skipCount = idx * RESERVATION_SIZE
       val before = range(this, 0, skipCount + TIMESTAMP_SIZE + VALUE_SIZE)
-      val restIdx = skipCount + SCRIPT_HASH_SIZE + 1
+      val restIdx = skipCount + SCRIPT_HASH_SIZE
       val after = range(restIdx, (items - idx - 1) * RESERVATION_SIZE)
       val newList = before
             .concat(recipient)
-            .concat(falseBytes)
             .concat(after)
       return newList
    }
@@ -479,12 +473,6 @@ object HubContract : SmartContract() {
    private fun Reservation.res_getRecipient(): ScriptHash {
       val scriptHash = this.range(TIMESTAMP_SIZE + VALUE_SIZE, SCRIPT_HASH_SIZE)
       return scriptHash
-   }
-
-   private fun Reservation.res_isMultiSigUnlocked(): Boolean {
-      val trueBytes = byteArrayOf(1)
-      val multiSigUnlocked = this.range(TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE, 1)
-      return multiSigUnlocked!! == trueBytes
    }
 
    private fun Reservation.res_wasPaidToRecipient(): Boolean {

@@ -50,6 +50,7 @@ object HubContract : SmartContract() {
    // Maximum values
    // the maximum value of a transaction is fixed at ~5497 GAS so that we can fit it into 5 bytes.
    private const val MAX_GAS_TX_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
+   private const val MAX_INT: Long = 0x7FFFFFFF
 
    // Fees
    private const val FEE_DEMAND_REWARD: Long = 300000000  // 3 GAS
@@ -72,6 +73,11 @@ object HubContract : SmartContract() {
          return init(args[0], args[1], args[2])
       if (operation == "is_initialized")
          return isInitialized()
+
+      if (operation == "test_notify") {
+         Runtime.notify("NotifySuccess!")
+         return true
+      }
 
       // Stateless test operations
       if (TESTS_ENABLED) {
@@ -746,6 +752,10 @@ object HubContract : SmartContract() {
             // since we found a matchable travel we can set the recipient's script hash in the reservation (matchedTravel)
             this.demand_reserveValueAndFee(owner, matchedTravel)
 
+            // switch the traveller's existing deposit reservation to a non-expiring one
+            val traveller = matchedTravel.travel_getOwnerScriptHash()
+            matchedTravel.travel_reserveNonExpiringDeposit(traveller)
+
             Runtime.notify("CL:OK:ReservedDemandValueAndFee:3")
          }
       }
@@ -997,6 +1007,10 @@ object HubContract : SmartContract() {
 
             Runtime.notify("CL:OK:MatchedTravelWithDemand")
 
+            // re-reserve the non-expiring security deposit
+            // unfortunately this line must be here due to compiler troubles with anything more complex
+            this.travel_reserveNonExpiringDeposit(owner)
+
             // rewrite the reservation that was created with the matched demand
             // this means that we inject the traveller's script hash as the "recipient" of the reserved funds
             // when a transaction to withdraw the funds is received (multi-sig) the destination wallet must match this one
@@ -1034,15 +1048,34 @@ object HubContract : SmartContract() {
 
    /**
     * Reserves the deposit due by a traveller when they create a [Travel].
-    * @owner the traveller
+    *
+    * Note: Use of this method will overwrite existing reserved funds for this wallet.
+    *
+    * @owner the traveller's wallet script hash
     */
    private fun Travel.travel_reserveDeposit(owner: ScriptHash) {
-      val expiry = this.travel_getExpiry()
+      var expiry = this.travel_getExpiry()
+      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT), true)
+   }
+
+   /**
+    * Reserves the non-expiring deposit due by a traveller when they create a [Travel].
+    *
+    * This method is to be used when a [Travel] has been matched with a [Demand] to provide more risk exposure to
+    * a traveller who may not fulfill their commitment to deliver the consignment.
+    *
+    * Note: Use of this method will overwrite existing reserved funds for this wallet.
+    *
+    * @param owner the traveller's script hash
+    */
+   private fun Travel.travel_reserveNonExpiringDeposit(owner: ScriptHash) {
+      var expiry = BigInteger.valueOf(MAX_INT)
       owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT), true)
    }
 
    /**
     * Finds a [Travel] in a [TravelList] that fits the given attributes.
+    *
     * @param repRequired the desired reputation of the traveller
     * @param carrySpaceRequired the carry space required (scale of 1-5)
     * @param nowTime the current unix timestamp in seconds

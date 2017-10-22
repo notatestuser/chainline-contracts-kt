@@ -46,19 +46,14 @@ object WalletContract : SmartContract() {
       if (! verifySignature(signature, ownerPubKey))
          return false
 
-      // Check that the assetId is GAS
+      // Get the GAS value in tx outputs
       val tx = ExecutionEngine.scriptContainer() as Transaction?
-      val reference = tx!!.references()[0]
-      val assetId = reference.assetId()
-      if (assetId != gasAssetId)
-         return true  // allow any non-GAS withdrawal
-
-      // Get the tx amount (count the gas in outputs)
       val executingScriptHash = ExecutionEngine.executingScriptHash()
       val outputs = tx!!.outputs()
       var value: Long = 0
       outputs.forEach {
-         if (it.scriptHash() == executingScriptHash)
+         if (it.scriptHash() == executingScriptHash &&
+               it.assetId() == gasAssetId)
             value += it.value()
       }
 

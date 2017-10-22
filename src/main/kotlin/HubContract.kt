@@ -75,11 +75,6 @@ object HubContract : SmartContract() {
       if (operation == "is_initialized")
          return isInitialized()
 
-      if (operation == "test_notify") {
-         Runtime.notify("NotifySuccess!")
-         return true
-      }
-
       // Stateless test operations
       if (TESTS_ENABLED) {
          if (operation == "test_reservation_create")

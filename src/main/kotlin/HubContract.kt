@@ -62,6 +62,7 @@ object HubContract : SmartContract() {
 
    /**
     * The entry point of the smart contract.
+    *
     * @param operation The method to run, specified as a string.
     * @param args A variable length array of arguments provided to the method.
     */
@@ -214,6 +215,7 @@ object HubContract : SmartContract() {
 
    /**
     * Checks whether the contract has been initialized.
+    *
     * @return true if the contract has been initialized
     */
    private fun isInitialized(): Boolean {
@@ -223,6 +225,7 @@ object HubContract : SmartContract() {
    /**
     * Initializes the smart contract. This takes three parts of the wallet script as arguments.
     * This is then used to verify the integrity of user wallets as they are used in the system.
+    *
     * @param walletScriptP1 part 1 of the wallet script code (code before the public key)
     * @param walletScriptP2 part 2 of the wallet script code (code after the public key, before the script hash)
     * @param walletScriptP3 part 3 of the wallet script code (code after the script hash)
@@ -244,6 +247,7 @@ object HubContract : SmartContract() {
 
    /**
     * Validates an individual user wallet.
+    *
     * @param pubKey the script hash of the user wallet to validate
     */
    private fun ScriptHash.wallet_validate(pubKey: ByteArray): Boolean {
@@ -262,6 +266,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the GAS balance of a user wallet.
+    *
     * @return the GAS balance
     */
    private fun ScriptHash.wallet_getBalance(): Long {
@@ -273,6 +278,7 @@ object HubContract : SmartContract() {
    /**
     * Requests permission to perform a withdrawal from a previously validated user wallet.
     * Note: Please ensure that the wallet has been validated before this is called.
+    *
     * @param value the outgoing value of the transaction
     * @param reservations the list of [reserved funds objects][Reservation] for the wallet
     * @return true if the transaction was cleared
@@ -294,7 +300,9 @@ object HubContract : SmartContract() {
 
    /**
     * Reserves funds in a previously validated user wallet.
+    *
     * Note: Please ensure that the wallet has been validated before this is called.
+    *
     * @param expiry timestamp of when the reserved funds get released automatically
     * @param value the amount of GAS to hold in the reservation
     * @param recipient the recipient wallet that the funds are reserved for
@@ -331,6 +339,7 @@ object HubContract : SmartContract() {
 
    /**
     * Functionally equivalent to [wallet_reserveFunds] except that this should be used when the recipient is unknown.
+    *
     * @see wallet_reserveFunds
     * @param expiry timestamp of when the reserved funds get released automatically
     * @param value the amount of GAS to withhold in the reservation
@@ -385,6 +394,7 @@ object HubContract : SmartContract() {
 
    /**
     * Indicates whether a wallet is in a state that allows it to open a demand or travel.
+    *
     * @param nowTime the current unix timestamp in seconds
     * @return true on success
     */
@@ -402,6 +412,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the list of [reserved funds][ReservationList] for the given wallet.
+    *
     * @return the serialized list of fund reservations
     */
    private fun ScriptHash.wallet_getFundReservations(): ReservationList {
@@ -411,7 +422,8 @@ object HubContract : SmartContract() {
    }
 
    /**
-     * Stores [reserved funds][ReservationList] for the given wallet.
+    * Stores [reserved funds][ReservationList] for the given wallet.
+    *
     * @param resList the [ReservationList] to store
     */
    private fun ScriptHash.wallet_storeFundReservations(resList: ReservationList) {
@@ -438,6 +450,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the reputation score for a user wallet.
+    *
     * @return the user's reputation score (number of complete transactions)
     */
    private fun ScriptHash.wallet_getReputationScore(): BigInteger {
@@ -448,6 +461,7 @@ object HubContract : SmartContract() {
 
    /**
     * Stores a reputation score for a user wallet.
+    *
     * @param rep the reputation score to store
     */
    private fun ScriptHash.wallet_storeReputationScore(rep: BigInteger) {
@@ -486,12 +500,12 @@ object HubContract : SmartContract() {
    // -==================-
 
    /**
-    * Creates a [reserved funds object][Reservation]
+    * Creates a [reserved funds object][Reservation].
+    *
     * @param expiry timestamp of when the reserved funds get released automatically
     * @param value the amount of GAS to hold in the reservation
     * @param recipient the recipient wallet that the funds are reserved for
     * @return the [reserved funds object][Reservation]
-    *
     */
    private fun reservation_create(expiry: BigInteger, value: BigInteger, recipient: ScriptHash): Reservation {
       // size: 30 bytes
@@ -503,6 +517,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the [reserved funds object][Reservation] at the given [index] in a [ReservationList].
+    *
     * @param index the zero-based index of the [Reservation] to retrieve
     * @return the [Reservation], or an empty array if not found
     */
@@ -512,6 +527,7 @@ object HubContract : SmartContract() {
 
    /**
     * Finds the [reserved funds object][Reservation] with the given [value] in a [ReservationList].
+    *
     * @param value the value to match
     * @return the index at which the [Reservation] is at in the [ReservationList]
     */
@@ -533,6 +549,7 @@ object HubContract : SmartContract() {
 
    /**
     * Finds the [reserved funds object][Reservation] with the given [value] and [recipient] in a [ReservationList].
+    *
     * @param value the value to match
     * @param recipient the recipient to match (AND)
     * @return the index at which the [Reservation] is at in the [ReservationList]
@@ -557,6 +574,7 @@ object HubContract : SmartContract() {
 
    /**
     * Finds the [reserved funds object][Reservation] at the given [idx] and replaces its [recipient] with the one given.
+    *
     * @param index the zero-based index of the [Reservation] to replace the [recipient] in
     * @param recipient the [recipient] to replace the existing one with in the [Reservation]
     * @return the new [ReservationList] containing the replaced entry
@@ -576,6 +594,7 @@ object HubContract : SmartContract() {
    /**
     * Calculates the total value of GAS that a [list of reserved funds][ReservationList] is holding, considering expiry
     * times and whether funds were already paid out to the intended recipient.
+    *
     * @param nowTime the current unix timestamp in seconds
     * @param assumeUnpaid skips a call to storage, used in testing
     * @return the total value of GAS that is reserved
@@ -605,6 +624,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the expiry timestamp for an individual [Reservation].
+    *
     * @return the unix timestamp in seconds
     */
    private fun Reservation.res_getExpiry(): BigInteger {
@@ -614,6 +634,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the GAS value of an individual [Reservation].
+    *
     * @return the GAS value of reserved funds
     */
    private fun Reservation.res_getValue(): BigInteger {
@@ -623,6 +644,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the intended recipient of reserved funds.
+    *
     * @return the script hash of the recipient
     */
    private fun Reservation.res_getRecipient(): ScriptHash {
@@ -632,6 +654,7 @@ object HubContract : SmartContract() {
 
    /**
     * Determines whether the reserved funds were paid out to the recipient.
+    *
     * @return true if the funds were paid to the recipient
     */
    private fun Reservation.res_wasPaidToRecipient(): Boolean {
@@ -686,6 +709,7 @@ object HubContract : SmartContract() {
 
    /**
     * Performs all the legwork necessary to store a [Demand].
+    *
     * @param owner the owner of the demand
     * @param pickUpCityHash the ripemd160 hashed form of the pick-up city
     * @param dropOffCityHash the ripemd160 hashed form of the drop-off city
@@ -725,6 +749,7 @@ object HubContract : SmartContract() {
          val carrySpaceRequired = this.demand_getItemSize()
 
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+
          val matchedTravel = travelsForCityPair.travels_findMatchableTravel(repRequired, carrySpaceRequired, nowTime)
          if (matchedTravel.isEmpty()) {  // no match
             Runtime.notify("CL:DBG:NoMatchableTravelForDemand:2")
@@ -766,6 +791,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the [Demand] at the given [index] in a [DemandList].
+    *
     * @param index the zero-based index of the [Demand] to retrieve
     * @return the [Demand], or an empty array if not found
     */
@@ -775,6 +801,7 @@ object HubContract : SmartContract() {
 
    /**
     * Reserves the item's value and reward fee for a new demand.
+    *
     * @param owner the owner of the demand
     */
    private fun Demand.demand_reserveValueAndFee(owner: ScriptHash) {
@@ -787,6 +814,7 @@ object HubContract : SmartContract() {
    /**
     * Reserves the item's value and reward fee for a new demand.
     * This form of the method is used when a [Travel] was found to be matched with the [Demand].
+    *
     * @param owner the owner of the demand
     * @param matchedTravel the travel that was matched with the demand
     */
@@ -800,6 +828,7 @@ object HubContract : SmartContract() {
 
    /**
     * Finds a [Demand] in a [DemandList] that fits the given attributes.
+    *
     * @param repRequired the desired reputation of the traveller
     * @param carrySpaceAvailable the carry space available (scale of 1-5)
     * @param nowTime the current unix timestamp in seconds
@@ -831,6 +860,7 @@ object HubContract : SmartContract() {
 
    /**
     * Determines whether the given [Demand] has been matched with a [Travel] object.
+    *
     * @return true if the [Demand] has been matched
     */
    private fun Demand.demand_isMatched(): Boolean {
@@ -842,6 +872,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the expiry timestamp of a [Demand].
+    *
     * @return the expiry time as a unix timestamp
     */
    private fun Demand.demand_getExpiry(): BigInteger {
@@ -851,6 +882,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the desired item's value.
+    *
     * @return the item's GAS value
     */
    private fun Demand.demand_getItemValue(): BigInteger {
@@ -860,6 +892,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the owner of the [Demand].
+    *
     * @return the owner's script hash
     */
    private fun Demand.demand_getOwnerScriptHash(): ScriptHash {
@@ -869,6 +902,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the reputation score required of a [Travel] in order to match this [Demand].
+    *
     * @return the minimum reputation score required
     */
    private fun Demand.demand_getRepRequired(): BigInteger {
@@ -877,7 +911,8 @@ object HubContract : SmartContract() {
    }
 
    /**
-    * Gets the size of the desired item
+    * Gets the size of the desired item.
+    *
     * @return the size of the desired item (scale of 1-5)
     */
    private fun Demand.demand_getItemSize(): BigInteger {
@@ -887,6 +922,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the info string for a [Demand].
+    *
     * @return the info string for a [Demand]
     */
    private fun Demand.demand_getInfoBlob(): ByteArray {
@@ -895,6 +931,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the time at which this [Demand] was matched with a [Travel].
+    *
     * @return the time as a unix timestamp
     */
    private fun Demand.demand_getMatchedAtTime(): BigInteger {
@@ -904,6 +941,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the storage key for a [Demand].
+    *
     * @return the storage key
     */
    private fun Hash160Pair.demand_getStorageKey(): ByteArray {
@@ -914,6 +952,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the storage key to store a [Travel] match for this [Demand].
+    *
     * @return the storage key
     */
    private fun Demand.demand_getMatchKey(): ByteArray {
@@ -956,6 +995,7 @@ object HubContract : SmartContract() {
 
    /**
     * Performs all the legwork necessary to store a [Travel].
+    *
     * @param owner the traveller
     * @param pickUpCityHash the ripemd160 hashed form of the pick-up city
     * @param dropOffCityHash the ripemd160 hashed form of the drop-off city
@@ -992,6 +1032,7 @@ object HubContract : SmartContract() {
          val carrySpaceAvailable = this.travel_getCarrySpace()
 
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+
          val matchedDemand = demandsForCityPair.demands_findMatchableDemand(repRequired, carrySpaceAvailable, nowTime)
          if (! matchedDemand.isEmpty()) {
             // match travel -> demand
@@ -1039,6 +1080,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the [Travel] at the given [index] in a [TravelList].
+    *
     * @param index the zero-based index of the [Travel] to retrieve
     * @return the [Travel], or an empty array if not found
     */
@@ -1106,6 +1148,7 @@ object HubContract : SmartContract() {
 
    /**
     * Determines whether the given [Travel] has been matched with a [Demand] object.
+    *
     * @return true if this [Travel] has been matched
     */
    private fun Travel.travel_isMatched(): Boolean {
@@ -1117,6 +1160,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the expiry timestamp of a [Travel].
+    *
     * @return the expiry time as a unix timestamp
     */
    private fun Travel.travel_getExpiry(): BigInteger {
@@ -1126,6 +1170,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the reputation score required of a [Demand] in order to match this [Travel].
+    *
     * @return the minimum reputation score required
     */
    private fun Travel.travel_getRepRequired(): BigInteger {
@@ -1135,6 +1180,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the item carry space available.
+    *
     * @return the carry space available (scale of 1-5, 5 is largest)
     */
    private fun Travel.travel_getCarrySpace(): BigInteger {
@@ -1144,6 +1190,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the owner of the [Travel].
+    *
     * @return the owner of the [Travel]
     */
    private fun Travel.travel_getOwnerScriptHash(): ScriptHash {
@@ -1153,6 +1200,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the time at which this [Travel] was matched with a [Demand].
+    *
     * @return the time as a unix timestamp
     */
    private fun Travel.travel_getMatchedAtTime(): BigInteger {
@@ -1162,6 +1210,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the storage key for a [Travel].
+    *
     * @return the storage key
     */
    private fun Hash160Pair.travel_getStorageKey(): ByteArray {
@@ -1172,6 +1221,7 @@ object HubContract : SmartContract() {
 
    /**
     * Gets the storage key to store a [Demand] match for this [Travel].
+    *
     * @return the storage key
     */
    private fun Travel.travel_getMatchKey(): ByteArray {
@@ -1221,6 +1271,7 @@ object HubContract : SmartContract() {
 
    /**
     * Concatenates two [ByteArray] together.
+    *
     * @param b2 the bytes to append
     * @return the combined byte array
     */
@@ -1230,6 +1281,7 @@ object HubContract : SmartContract() {
 
    /**
     * Extracts a range of bytes from a [ByteArray].
+    *
     * @param index the index to start at
     * @param count the number of bytes to extract, starting at [index]
     * @return the extracted bytes
@@ -1240,6 +1292,7 @@ object HubContract : SmartContract() {
 
    /**
     * Takes a number of bytes from the start of a [ByteArray].
+    *
     * @param count the number of bytes to take
     * @return the extracted bytes
     */
@@ -1249,6 +1302,7 @@ object HubContract : SmartContract() {
 
    /**
     * Pads a [BigInteger] that has been converted to a [ByteArray] to a specified byte length.
+    *
     * @param count the number of bytes to pad to
     * @return the padded byte array, able to be converted back to a [BigInteger] when needed
     */
@@ -1265,6 +1319,7 @@ object HubContract : SmartContract() {
 
    /**
     * Converts a [BigInteger] to a padded [ByteArray].
+    *
     * @see pad
     * @param count the number of bytes to pad to
     * @return the padded byte array, able to be converted back to a [BigInteger] when needed

@@ -75,7 +75,7 @@ object HubContract : SmartContract() {
       if (operation == "is_initialized")
          return isInitialized()
 
-      // Stateless test operations
+      //region Tests
       if (TESTS_ENABLED) {
          if (operation == "test_reservation_create")
             return reservation_create(BigInteger(args[0]), BigInteger(args[1]), args[2])
@@ -104,6 +104,7 @@ object HubContract : SmartContract() {
          if (operation == "test_travel_getOwnerScriptHash")
             return args[0].travel_getOwnerScriptHash()
       }
+      //endregion
 
       // Can't call IsInitialized() from here 'cause the compiler don't like it
       if (Storage.get(Storage.currentContext(), "Initialized").isEmpty()) {
@@ -207,6 +208,7 @@ object HubContract : SmartContract() {
    // -====================-
    // -=  Initialization  =-
    // -====================-
+   //region initialization
 
    /**
     * Checks whether the contract has been initialized.
@@ -236,9 +238,12 @@ object HubContract : SmartContract() {
       return true
    }
 
+   //endregion
+
    // -=============-
    // -=  Wallets  =-
    // -=============-
+   //region wallets
 
    /**
     * Validates an individual user wallet.
@@ -490,9 +495,12 @@ object HubContract : SmartContract() {
       return this
    }
 
+   //endregion
+
    // -==================-
    // -=  Reservations  =-
    // -==================-
+   //region reservations
 
    /**
     * Creates a [reserved funds object][Reservation].
@@ -659,9 +667,12 @@ object HubContract : SmartContract() {
       return false
    }
 
+   //endregion
+
    // -=============-
    // -=  Demands  =-
    // -=============-
+   //region demands
 
    /**
     * Creates a new [Demand].
@@ -955,9 +966,12 @@ object HubContract : SmartContract() {
       return key
    }
 
+   //endregion
+
    // -============-
    // -=  Travel  =-
    // -============-
+   //region travel
 
    /**
     * Creates a new [Travel].
@@ -1223,9 +1237,12 @@ object HubContract : SmartContract() {
       return this
    }
 
+   //endregion
+
    // -=================-
    // -=  Init Params  =-
    // -=================-
+   //region init params
 
    /**
     * The GAS asset ID as a byte array.
@@ -1260,9 +1277,12 @@ object HubContract : SmartContract() {
       return Storage.get(Storage.currentContext(), "WalletScriptP3")
    }
 
+   //endregion
+
    // -================-
    // -=  Extensions  =-
    // -================-
+   //region extensions
 
    /**
     * Concatenates two [ByteArray] together.
@@ -1323,4 +1343,6 @@ object HubContract : SmartContract() {
       var bytes = this.toByteArray()
       return bytes.pad(count)
    }
+
+   //endregion
 }

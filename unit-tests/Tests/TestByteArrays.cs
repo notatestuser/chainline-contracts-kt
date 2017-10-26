@@ -3,8 +3,68 @@ using Xunit;
 using Xunit.Abstractions;
 
 namespace CLTests {
-   public class TestSanity : Test {
-      public TestSanity(ITestOutputHelper output) : base(output) { }
+   public class TestByteArrays : Test {
+      public TestByteArrays(ITestOutputHelper output) : base(output) { }
+
+      [Fact]
+      public void TestNullBytes() {
+         ExecutionEngine engine = LoadContract("Testbed");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(0);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_null");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(new byte[] {}, result);
+      }
+
+      [Fact]
+      public void TestNullIsEmpty() {
+         ExecutionEngine engine = LoadContract("Testbed");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(0);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_null_isEmpty");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetBoolean();
+         Assert.True(result);
+      }
+
+      [Fact]
+      public void TestTrueBytes() {
+         ExecutionEngine engine = LoadContract("Testbed");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(0);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_true");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(new byte[] { 1 }, result);
+      }
+
+      [Fact]
+      public void TestFalseBytes() {
+         ExecutionEngine engine = LoadContract("Testbed");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(0);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_false");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(new byte[] {}, result);
+      }
 
       [Fact]
       public void TestField() {

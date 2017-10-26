@@ -1,17 +1,25 @@
 package chainline.contracts
 
+import java.math.BigInteger
 import org.neo.smartcontract.framework.Helper.*
 import org.neo.smartcontract.framework.SmartContract
 import org.neo.smartcontract.framework.services.neo.Blockchain
-import java.math.BigInteger
 
 object Testbed : SmartContract() {
 
    //val field1 = "To the moon!"
 
-   fun Main(operation: String, vararg args: ByteArray): Any {
+   fun Main(operation: String, vararg args: ByteArray): Any? {
       // Sanity Tests
       val field2 = "To the moon!"
+      if (operation == "test_true")
+         return true
+      if (operation == "test_false")
+         return false
+      if (operation == "test_null")
+         return null
+      if (operation == "test_null_isEmpty")
+         return (null as ByteArray?)!!.isEmpty()
       if (operation == "test_arrayrev")
          return args[0].reverse()
       if (operation == "test_arrayeq")

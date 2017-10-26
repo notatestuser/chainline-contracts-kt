@@ -784,8 +784,10 @@ object HubContract : SmartContract() {
             this.demand_reserveValueAndFee(owner, matchedTravel)
 
             // switch the traveller's existing deposit reservation to a non-expiring one
-            val traveller = matchedTravel.travel_getOwnerScriptHash()
-            matchedTravel.travel_reserveNonExpiringDeposit(traveller)
+            // todo: NOT ENABLED for now, an expiring deposit is a solution to potential problems with unsatisfactory or impossible demands
+            //       beyond the MVP we will be able to use a matching system to overcome the need for this
+            // val traveller = matchedTravel.travel_getOwnerScriptHash()
+            // matchedTravel.travel_reserveNonExpiringDeposit(traveller)
 
             Runtime.notify("CL:OK:ReservedDemandValueAndFee:3")
          }
@@ -1059,7 +1061,9 @@ object HubContract : SmartContract() {
 
             // re-reserve the non-expiring security deposit
             // unfortunately this line must be here due to compiler troubles with anything more complex
-            this.travel_reserveNonExpiringDeposit(owner)
+            // todo: NOT ENABLED for now, an expiring deposit is a solution to potential problems with unsatisfactory or impossible demands
+            //       beyond the MVP we will be able to use a matching system to overcome the need for this
+            //this.travel_reserveNonExpiringDeposit(owner)
 
             // rewrite the reservation that was created with the matched demand
             // this means that we inject the traveller's script hash as the "recipient" of the reserved funds

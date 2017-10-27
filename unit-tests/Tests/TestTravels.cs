@@ -1,6 +1,7 @@
 ﻿using Neo.VM;
 using Xunit;
 using Xunit.Abstractions;
+using System;
 using System.Linq;
 
 namespace CLTests {
@@ -40,6 +41,7 @@ namespace CLTests {
             1, 0,
             // carrySpace
             2,
+            // owner script hash (appended)
          }.Concat(ScriptHash).ToArray();
 
          Assert.Equal(expected, result);
@@ -77,6 +79,7 @@ namespace CLTests {
             1, 0,
             // carrySpace
             2,
+            // owner script hash (appended)
          }.Concat(ScriptHash).ToArray();
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
@@ -102,6 +105,7 @@ namespace CLTests {
             1, 0,
             // carrySpace
             2,
+            // owner script hash (appended)
          }.Concat(ScriptHash).ToArray();
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
@@ -114,6 +118,61 @@ namespace CLTests {
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
          Assert.Equal(ScriptHash, result);
+      }
+
+      [Fact]
+      public void TestFindMatchableTravel() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         var nowTime = 101;
+         byte[] expiredExpiry = BitConverter.GetBytes(100).ToArray();
+         byte[] futureExpiry = BitConverter.GetBytes(102).ToArray();
+
+         // travel1 - already expired
+         var travel1 = expiredExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // repRequired
+            1, 0,
+            // carrySpace
+            2,
+            // owner script hash (appended)
+         }).Concat(ScriptHash).ToArray();
+
+         // travel2 - carry space insufficient
+         var travel2 = futureExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // repRequired
+            1, 0,
+            // carrySpace
+            2,
+            // owner script hash (appended)
+         }).Concat(ScriptHash).ToArray();
+
+         // travel3 - suitable
+         var travel3 = futureExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // repRequired
+            1, 0,
+            // carrySpace
+            3,
+            // owner script hash (appended)
+         }).Concat(ScriptHash).ToArray();
+
+         var travels = travel1.Concat(travel2).Concat(travel3).ToArray();
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(nowTime);  // args[3] - nowTime
+            sb.EmitPush(3);  // args[2] - carrySpaceRequired
+            sb.EmitPush(0);  // args[1] - repRequired
+            sb.EmitPush(travels);  // args[0]
+            sb.EmitPush(4);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_travel_findMatchableTravel");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(travel3, result);
       }
    }
 }

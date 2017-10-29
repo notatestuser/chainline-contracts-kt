@@ -828,8 +828,7 @@ object HubContract : SmartContract() {
     */
    private fun Demand.demand_reserveValueAndFee(owner: ScriptHash) {
       val expiry = this.demand_getExpiry()
-      val itemValue = this.demand_getItemValue().toLong()
-      val toReserve = itemValue + FEE_DEMAND_REWARD
+      val toReserve = this.demand_getTotalValue().toLong()
       owner.wallet_reserveFunds(expiry, BigInteger.valueOf(toReserve), true)
    }
 
@@ -842,8 +841,7 @@ object HubContract : SmartContract() {
     */
    private fun Demand.demand_reserveValueAndFee(owner: ScriptHash, matchedTravel: Travel) {
       val expiry = this.demand_getExpiry()
-      val itemValue = this.demand_getItemValue().toLong()
-      val toReserve = itemValue + FEE_DEMAND_REWARD
+      val toReserve = this.demand_getTotalValue().toLong()
       val travellerScriptHash = matchedTravel.travel_getOwnerScriptHash()
       owner.wallet_reserveFunds(expiry, BigInteger.valueOf(toReserve), travellerScriptHash, true)
    }
@@ -914,6 +912,16 @@ object HubContract : SmartContract() {
    private fun Demand.demand_getItemValue(): BigInteger {
       val bytes = this.range(TIMESTAMP_SIZE, VALUE_SIZE)
       return BigInteger(bytes)
+   }
+
+   /**
+    * Gets the [Demand]'s total value (item value + reward fee).
+    *
+    * @return the demand's GAS value
+    */
+   private fun Demand.demand_getTotalValue(): BigInteger {
+      val bytes = this.range(TIMESTAMP_SIZE, VALUE_SIZE)
+      return BigInteger(bytes) + BigInteger.valueOf(FEE_DEMAND_REWARD)
    }
 
    /**
@@ -1086,7 +1094,7 @@ object HubContract : SmartContract() {
             // this means that we inject the traveller's script hash as the "recipient" of the reserved funds
             // when a transaction to withdraw the funds is received (multi-sig) the destination wallet must match this one
             val demandOwner = matchedDemand.demand_getOwnerScriptHash()
-            val demandValue = matchedDemand.demand_getItemValue()
+            val demandValue = matchedDemand.demand_getTotalValue()
             val ownerReservationList = demandOwner.wallet_getFundReservations()
             val reservationAtIdx = ownerReservationList.res_findBy(demandValue)
             if (reservationAtIdx > 0) {

@@ -700,7 +700,7 @@ object HubContract : SmartContract() {
     *   - carry space required (xs, sm, md, lg, xl) (1, 2, 3, 4, 5)
     *
     * @param owner the owner of the demand
-    * @param expiry the time that the demand expires as a unix timestmap
+    * @param expiry the time that the demand expires as a unix timestamp
     * @param repRequired the reputation required of a traveller in order for this demand to be matched
     * @param itemSize the size of the item (on a scale of 1-5)
     * @param itemValue the value of the item in GAS

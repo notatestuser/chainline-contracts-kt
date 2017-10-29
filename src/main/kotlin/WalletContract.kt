@@ -14,7 +14,7 @@ import org.neo.smartcontract.framework.services.system.ExecutionEngine
 
 object WalletContract : SmartContract() {
 
-	@Appcall("30a2b04139d714564eb956896498616cf8acc8db")
+	@Appcall("fe8ec60d009691abe25ba4050010092e947b735e")
 	private external fun HubContract(operation: String, vararg args: Any): Boolean
 
    /**
@@ -38,29 +38,29 @@ object WalletContract : SmartContract() {
             253 as Byte, 223 as Byte, 178 as Byte, 227 as Byte, 132 as Byte, 16, 11, 141 as Byte,
             20, 142 as Byte, 119, 88, 222 as Byte, 66, 228 as Byte, 22, 139 as Byte, 113, 121, 44, 96)
 
-      // Ensure that we're processing a withdrawal
-      if (Runtime.trigger() != TriggerType.Verification)
-         return false
-
-      // Verify the tx against the wallet owner's pubkey
+      // Verify the signature against the wallet owner's pubkey
       if (! verifySignature(signature, ownerPubKey))
          return false
+
+      // Ensure that we are processing a withdrawal
+      if (Runtime.trigger() != TriggerType.Verification)
+         return true
 
       // Get the GAS value in tx outputs
       val tx = ExecutionEngine.scriptContainer() as Transaction?
       val executingScriptHash = ExecutionEngine.executingScriptHash()
       val outputs = tx!!.outputs()
-      var value: Long = 0
+      var gasTxValue: Long = 0
       outputs.forEach {
          if (it.scriptHash() == executingScriptHash &&
                it.assetId() == gasAssetId)
-            value += it.value()
+            gasTxValue += it.value()
       }
 
       // Call the HubContract to validate the withdrawal
-      if (value > 0) {
+      if (gasTxValue > 0) {
          val recipient = outputs[0].scriptHash()
-         val allow = HubContract("wallet_requestTxOut", signature, ownerPubKey, recipient, value)
+         val allow = HubContract("wallet_requestTxOut", signature, ownerPubKey, recipient, gasTxValue)
          return allow
       }
 

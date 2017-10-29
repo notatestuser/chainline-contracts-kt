@@ -75,7 +75,7 @@ object HubContract : SmartContract() {
       if (operation == "is_initialized")
          return isInitialized()
 
-      //region Tests
+      //region Test operations
       if (TESTS_ENABLED) {
          if (operation == "test_reservation_create")
             return reservation_create(BigInteger(args[0]), BigInteger(args[1]), args[2])
@@ -119,17 +119,18 @@ object HubContract : SmartContract() {
       // Wallet query operations
       if (operation == "wallet_validate")
          return args[0].wallet_validate(args[1])
-      if (operation == "wallet_getBalance")
-         return args[0].wallet_getBalance()
       if (operation == "wallet_getReputationScore")
          return args[0].wallet_getReputationScore()
-      // if (operation == "wallet_getBalanceOnHold") {
-      //    val reservations = Storage.get(Storage.currentContext(), args[0])
-      //    if (reservations.isEmpty())
-      //       return 0
-      //    val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-      //    val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
-      // }
+      if (operation == "wallet_getGasBalance")
+         return args[0].wallet_getGasBalance()
+       if (operation == "wallet_getReservedGasBalance") {
+          val reservations = Storage.get(Storage.currentContext(), args[0])
+          if (reservations.isEmpty())
+             return 0
+          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+          val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
+          return gasOnHold
+       }
       if (operation == "wallet_getFundReservations")
          return args[0].wallet_getFundReservations()
       if (operation == "wallet_requestTxOut") {
@@ -165,6 +166,10 @@ object HubContract : SmartContract() {
          val stateKey = args[0].wallet_getStateStorageKey()
          return Storage.get(Storage.currentContext(), stateKey)
       }
+      if (operation == "demand_isMatched")
+         return args[0].demand_isMatched()
+      if (operation == "demand_getMatchKey")
+         return args[0].demand_getMatchKey()
       if (operation == "demand_getTravelMatch") {
          val matchKey = args[0].demand_getMatchKey()
          return Storage.get(Storage.currentContext(), matchKey)
@@ -174,6 +179,10 @@ object HubContract : SmartContract() {
          val travel = Storage.get(Storage.currentContext(), matchKey)
          return travel.travel_getMatchedAtTime()
       }
+      if (operation == "travel_isMatched")
+         return args[0].travel_isMatched()
+      if (operation == "travel_getMatchKey")
+         return args[0].travel_getMatchKey()
       if (operation == "travel_getDemandMatch") {
          val matchKey = args[0].travel_getMatchKey()
          return Storage.get(Storage.currentContext(), matchKey)
@@ -187,21 +196,23 @@ object HubContract : SmartContract() {
       // The following operations can write state
       if (! Runtime.checkWitness(args[0]))
          return false
+      Runtime.notify("CL:OK:checkWitness")
 
-      // Demand/travel open
+      // Open and try to match a Demand
       if (operation == "demand_open") {
          if (args[0].wallet_validate(args[1]) &&
                args[0].wallet_canOpenDemandOrTravel()) {
             val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6])
-            return demand.demand_store(args[0], args[7], args[8])
+            return demand.demand_storeAndMatch(args[0], args[7], args[8])
          }
          return false
       }
+      // Open and try to match a Travel
       if (operation == "travel_open") {
          if (args[0].wallet_validate(args[1]) &&
                args[0].wallet_canOpenDemandOrTravel()) {
             val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]))
-            return travel.travel_store(args[0], args[5], args[6])
+            return travel.travel_storeAndMatch(args[0], args[5], args[6])
          }
          return false
       }
@@ -273,7 +284,7 @@ object HubContract : SmartContract() {
     *
     * @return the GAS balance
     */
-   private fun ScriptHash.wallet_getBalance(): Long {
+   private fun ScriptHash.wallet_getGasBalance(): Long {
       val account = Blockchain.getAccount(this)
       Runtime.notify("CL:OK:FoundWallet", account.scriptHash())
       return account.getBalance(getAssetId())
@@ -290,7 +301,7 @@ object HubContract : SmartContract() {
    private fun ScriptHash.wallet_requestTxOut(value: BigInteger, reservations: ReservationList): Boolean {
       Runtime.notify("CL:DBG:requestTxOut")
       // check if balance is enough after reserved funds are considered
-      val balance = this.wallet_getBalance()
+      val balance = this.wallet_getGasBalance()
       val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
       val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
       val effectiveBalance = balance - gasOnHold
@@ -315,7 +326,7 @@ object HubContract : SmartContract() {
     */
    private fun ScriptHash.wallet_reserveFunds(expiry: BigInteger, value: BigInteger, recipient: ScriptHash,
                                               overwrite: Boolean): Boolean {
-      val balance = this.wallet_getBalance()
+      val balance = this.wallet_getGasBalance()
       val toReserve = value.toLong()
       if (balance <= toReserve) {  // insufficient balance
          Runtime.notify("CL:ERR:InsufficientFunds1")
@@ -718,14 +729,14 @@ object HubContract : SmartContract() {
    }
 
    /**
-    * Performs all the legwork necessary to store a [Demand].
+    * Performs all the legwork necessary to store and match a [Demand] with a [Travel].
     *
     * @param owner the owner of the demand
     * @param pickUpCityHash the ripemd160 hashed form of the pick-up city
     * @param dropOffCityHash the ripemd160 hashed form of the drop-off city
     * @return true on success
     */
-   private fun Demand.demand_store(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160): Boolean {
+   private fun Demand.demand_storeAndMatch(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160): Boolean {
       Runtime.notify("CL:DBG:Demand.store")
 
       // store the demand object (state lock)
@@ -1012,14 +1023,14 @@ object HubContract : SmartContract() {
    }
 
    /**
-    * Performs all the legwork necessary to store a [Travel].
+    * Performs all the legwork necessary to store and match a [Travel] with a [Demand].
     *
     * @param owner the traveller
     * @param pickUpCityHash the ripemd160 hashed form of the pick-up city
     * @param dropOffCityHash the ripemd160 hashed form of the drop-off city
     * @return true on success
     */
-   private fun Travel.travel_store(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160): Boolean {
+   private fun Travel.travel_storeAndMatch(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160): Boolean {
       Runtime.notify("CL:DBG:Travel.store")
 
       // store the travel object (state lock)
@@ -1162,8 +1173,8 @@ object HubContract : SmartContract() {
          }
          if (expiry.toInt() > nowTime &&
                ownerRep >= repRequired &&
-               carrySpaceAvailable >= carrySpaceRequired)
-               // (assumeUnmatched || ! travel.travel_isMatched()))
+               carrySpaceAvailable >= carrySpaceRequired &&
+               (assumeUnmatched || ! travel.travel_isMatched()))
             return travel
          i++
       }
@@ -1249,7 +1260,8 @@ object HubContract : SmartContract() {
     * @return the storage key
     */
    private fun Travel.travel_getMatchKey(): ByteArray {
-      return this
+      val key = take(this, TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE)
+      return key
    }
 
    //endregion

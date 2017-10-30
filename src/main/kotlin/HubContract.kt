@@ -28,6 +28,7 @@ typealias TravelList = ByteArray
 
 object HubContract : SmartContract() {
 
+   private const val LOG_LEVEL = 3  // 1: errors, 2: info/warn, 3: debug
    private const val TESTS_ENABLED = true
 
    // Byte array sizes
@@ -138,11 +139,9 @@ object HubContract : SmartContract() {
          return args[0].wallet_getGasBalance()
        if (operation == "wallet_getReservedGasBalance") {
           val reservations = Storage.get(Storage.currentContext(), args[0])
-          if (reservations.isEmpty())
-             return 0
+          if (reservations.isEmpty()) return 0
           val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-          val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
-          return gasOnHold
+          return reservations.res_getTotalOnHoldGasValue(nowTime)
        }
       if (operation == "wallet_getFundReservations")
          return args[0].wallet_getFundReservations()
@@ -151,7 +150,7 @@ object HubContract : SmartContract() {
             val reservations = args[0].wallet_getFundReservations()
             return args[0].wallet_requestTxOut(BigInteger(args[3]), reservations)
          }
-         Runtime.notify("CL:ERR:InvalidWallet")
+         Runtime.notify("CL:ERR:InvalidWallet")  // the compiler does not like log_* here
          return false
       }
       if (operation == "wallet_setReservationPaidToRecipientTxHash") {
@@ -167,6 +166,8 @@ object HubContract : SmartContract() {
                // increment account reputation scores
                args[0].wallet_incrementReputationScore()
                args[2].wallet_incrementReputationScore()
+
+               return true
             }
          }
          return false
@@ -207,7 +208,7 @@ object HubContract : SmartContract() {
       // The following operations can write state
       if (! Runtime.checkWitness(args[0]))
          return false
-      Runtime.notify("CL:OK:checkWitness")
+      Runtime.notify("CL:OK:checkWitness")  // the compiler does not like log_* here
 
       // Open and try to match a Demand
       if (operation == "demand_open") {
@@ -258,7 +259,7 @@ object HubContract : SmartContract() {
       Storage.put(Storage.currentContext(), "WalletScriptP2", walletScriptP2)
       Storage.put(Storage.currentContext(), "WalletScriptP3", walletScriptP3)
       Storage.put(Storage.currentContext(), "Initialized", trueBytes)
-      Runtime.notify("CL:OK:HubInitialized")
+      log_info("CL:OK:HubInitialized")
       return true
    }
 
@@ -284,7 +285,7 @@ object HubContract : SmartContract() {
       val expectedScriptHash = hash160(expectedScript)
       if (this == expectedScriptHash)
          return true
-      Runtime.notify("CL:ERR:WalletValidateFail", expectedScriptHash, expectedScript)
+      Runtime.notify("CL:ERR:WalletValidateFail", expectedScriptHash, expectedScript)  // the compiler does not like log_* here
       return false
    }
 
@@ -295,7 +296,7 @@ object HubContract : SmartContract() {
     */
    private fun ScriptHash.wallet_getGasBalance(): Long {
       val account = Blockchain.getAccount(this)
-      Runtime.notify("CL:OK:FoundWallet", account.scriptHash())
+      if (LOG_LEVEL > 1) Runtime.notify("CL:OK:FoundWallet", account.scriptHash())  // compiler woes
       return account.getBalance(getAssetId())
    }
 
@@ -308,17 +309,17 @@ object HubContract : SmartContract() {
     * @return true if the transaction was cleared
     */
    private fun ScriptHash.wallet_requestTxOut(value: BigInteger, reservations: ReservationList): Boolean {
-      Runtime.notify("CL:DBG:requestTxOut")
+      log_debug("CL:DBG:requestTxOut")
       // check if balance is enough after reserved funds are considered
       val balance = this.wallet_getGasBalance()
       val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
       val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
       val effectiveBalance = balance - gasOnHold
       if (effectiveBalance < value.toLong()) {
-         Runtime.notify("CL:ERR:InsufficientBalance")
+         log_err("CL:ERR:InsufficientBalance")
          return false  // insufficient non-reserved funds
       }
-      Runtime.notify("CL:OK:RequestTxOut1")
+      if (LOG_LEVEL > 1) Runtime.notify("CL:OK:RequestTxOut1")  // compiler woes
       return true
    }
 
@@ -338,7 +339,7 @@ object HubContract : SmartContract() {
       val balance = this.wallet_getGasBalance()
       val toReserve = value.toLong()
       if (balance <= toReserve) {  // insufficient balance
-         Runtime.notify("CL:ERR:InsufficientFunds1")
+         log_err("CL:ERR:InsufficientFunds1")
          return false
       }
       var reservations = byteArrayOf()
@@ -351,17 +352,17 @@ object HubContract : SmartContract() {
          return false
       val effectiveBalance = balance - gasOnHold
       if (effectiveBalance < toReserve) {
-         Runtime.notify("CL:ERR:InsufficientFunds2")
+         log_err("CL:ERR:InsufficientFunds2")
          return false
       }
       val reservation = reservation_create(expiry, value, recipient)
       val newReservations = reservations.concat(reservation)
       reservation.wallet_storeFundReservations(newReservations)
-      Runtime.notify("CL:OK:ReservedFunds", reservation)
+      log_info("CL:OK:ReservedFunds", reservation)
 
       // add to accumulating stats counter
       stats_recordReservedFunds(value)
-      Runtime.notify("CL:DBG:UpdatedReservedFundsStats", value)
+      log_debug("CL:DBG:UpdatedReservedFundsStats", value.toByteArray())
 
       return true
    }
@@ -396,7 +397,7 @@ object HubContract : SmartContract() {
     */
    private fun ScriptHash.wallet_setReservationPaidToRecipientTxHash(recipient: ScriptHash, value: BigInteger,
                                                                      txHash: Hash256): Boolean {
-      Runtime.notify("CL:DBG:setReservationPaidToRecipientTxHash")
+      log_debug("CL:DBG:setReservationPaidToRecipientTxHash")
       val reservations = this.wallet_getFundReservations()
       val matchIdx = reservations.res_findBy(value, recipient)
       if (matchIdx > -1) {
@@ -428,7 +429,7 @@ object HubContract : SmartContract() {
     * @return true on success
     */
    private fun ScriptHash.wallet_canOpenDemandOrTravel(nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp()): Boolean {
-      Runtime.notify("CL:DBG:canOpenDemandOrTravel")
+      log_debug("CL:DBG:canOpenDemandOrTravel")
       val stateObject = Storage.get(Storage.currentContext(), this)
       if (stateObject.isEmpty())
          return true
@@ -718,9 +719,6 @@ object HubContract : SmartContract() {
     */
    private fun demand_create(owner: ScriptHash, expiry: BigInteger, repRequired: BigInteger, itemSize: BigInteger,
                              itemValue: BigInteger, infoBlob: ByteArray): Demand {
-      Runtime.notify("CL:DBG:CreatingDemand")
-      // checking individual arg lengths doesn't seem to work here
-      // I tried a lot of things, grr compiler
       val nil = byteArrayOf()
       if (itemValue.toLong() > MAX_GAS_TX_VALUE)
          return nil
@@ -732,9 +730,13 @@ object HubContract : SmartContract() {
             .concat(repRequired.toByteArray(REP_REQUIRED_SIZE))
             .concat(itemSize.toByteArray(CARRY_SPACE_SIZE))
             .concat(infoBlob)
-      if (demand.size != expectedSize)
+      // checking individual arg lengths doesn't seem to work here
+      // I tried a lot of things, grr compiler
+      if (demand.size != expectedSize) {
+         Runtime.notify("CL:ERR:UnexpectedDemandSize")  // compiler woes
          return nil
-      Runtime.notify("CL:OK:DemandCreated")
+      }
+      if (LOG_LEVEL > 1) Runtime.notify("CL:OK:DemandCreated")
       return demand
    }
 
@@ -747,7 +749,7 @@ object HubContract : SmartContract() {
     * @return true on success
     */
    private fun Demand.demand_storeAndMatch(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160): Boolean {
-      Runtime.notify("CL:DBG:Demand.store")
+      log_debug("CL:DBG:Demand.store")
 
       // store the demand object (state lock)
       Storage.put(Storage.currentContext(), owner, this)
@@ -758,15 +760,15 @@ object HubContract : SmartContract() {
       val demandsForCity = Storage.get(Storage.currentContext(), cityHashPairKeyD)
       val newDemandsForCity = demandsForCity.concat(this)
       Storage.put(Storage.currentContext(), cityHashPairKeyD, newDemandsForCity)
-      Runtime.notify("CL:OK:StoredDemand", cityHashPair)
+      log_info("CL:OK:StoredDemand", cityHashPair)
 
       // increment city usage counters (for stats)
       stats_recordCityUsage(pickUpCityHash)
       stats_recordCityUsage(dropOffCityHash)
-      Runtime.notify("CL:DBG:UpdatedCityUsageStats", cityHashPair)
+      log_debug("CL:DBG:UpdatedCityUsageStats", cityHashPair)
 
       stats_recordDemand()
-      Runtime.notify("CL:DBG:UpdatedDemandStats", cityHashPair)
+      log_debug("CL:DBG:UpdatedDemandStats", cityHashPair)
 
       // find a travel object to match this demand with
       val cityHashPairKeyT = cityHashPair.travel_getStorageKey()
@@ -774,10 +776,10 @@ object HubContract : SmartContract() {
 
       // no travels available! no match can be made yet
       if (travelsForCityPair.isEmpty()) {
-         Runtime.notify("CL:DBG:NoMatchableTravelForDemand:1")
+         log_debug("CL:DBG:NoMatchableTravelForDemand:1")
          // reserve the item's value and fee (no match yet, reserve for later)
          this.demand_reserveValueAndFee(owner)
-         Runtime.notify("CL:OK:ReservedDemandValueAndFee:1")
+         log_info("CL:OK:ReservedDemandValueAndFee:1")
       }
 
       // random compiler errors made the below messy and split this if. it's not my fault :)
@@ -789,12 +791,12 @@ object HubContract : SmartContract() {
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
          val matchedTravel = travelsForCityPair.travel_findMatchableTravel(repRequired, carrySpaceRequired, nowTime)
          if (matchedTravel.isEmpty()) {  // no match
-            Runtime.notify("CL:DBG:NoMatchableTravelForDemand:2")
+            log_debug("CL:DBG:NoMatchableTravelForDemand:2")
 
             // reserve the item's value and fee (no match yet, reserve for later)
             this.demand_reserveValueAndFee(owner)
 
-            Runtime.notify("CL:OK:ReservedDemandValueAndFee:2")
+            log_info("CL:OK:ReservedDemandValueAndFee:2")
          } else {
             // match demand -> travel
             val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
@@ -808,7 +810,7 @@ object HubContract : SmartContract() {
             val timestampedOtherMatch = this.concat(nowTimeBytes)
             Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
 
-            Runtime.notify("CL:OK:MatchedDemandWithTravel")
+            log_info("CL:OK:MatchedDemandWithTravel")
 
             // reserve the item's value and fee
             // this will overwrite existing fund reservations for this wallet
@@ -821,11 +823,9 @@ object HubContract : SmartContract() {
             // val traveller = matchedTravel.travel_getOwnerScriptHash()
             // matchedTravel.travel_reserveNonExpiringDeposit(traveller)
 
-            Runtime.notify("CL:OK:ReservedDemandValueAndFee:3")
+            log_info("CL:OK:ReservedDemandValueAndFee:3")
          }
       }
-
-      Runtime.notify("CL:RET:Demand.store")
       return true
    }
 
@@ -904,7 +904,7 @@ object HubContract : SmartContract() {
     * @return true if the [Demand] has been matched
     */
    private fun Demand.demand_isMatched(): Boolean {
-      Runtime.notify("CL:DBG:Demand.isMatched")
+      log_debug("CL:DBG:Demand.isMatched")
       val matchKey = this.demand_getMatchKey()
       val match = Storage.get(Storage.currentContext(), matchKey)
       return !match.isEmpty()
@@ -1027,16 +1027,19 @@ object HubContract : SmartContract() {
     * @param carrySpace the carry space available (on a scale of 1-5)
     */
    private fun travel_create(owner: ScriptHash, expiry: BigInteger, repRequired: BigInteger, carrySpace: BigInteger): Travel {
-      Runtime.notify("CL:DBG:CreatingTravel")
       val nil = byteArrayOf()
       // size: 27 bytes
       val travel = expiry.toByteArray(TIMESTAMP_SIZE)
             .concat(repRequired.toByteArray(REP_REQUIRED_SIZE))
             .concat(carrySpace.toByteArray(CARRY_SPACE_SIZE))
             .concat(owner)
-      if (travel.size != TRAVEL_SIZE)
+      // checking individual arg lengths doesn't seem to work here
+      // I tried a lot of things, grr compiler
+      if (travel.size != TRAVEL_SIZE) {
+         Runtime.notify("CL:ERR:UnexpectedTravelSize")
          return nil
-      Runtime.notify("CL:OK:TravelCreated")
+      }
+      if (LOG_LEVEL > 1) Runtime.notify("CL:OK:TravelCreated")  // compiler woes
       return travel
    }
 
@@ -1049,7 +1052,7 @@ object HubContract : SmartContract() {
     * @return true on success
     */
    private fun Travel.travel_storeAndMatch(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160): Boolean {
-      Runtime.notify("CL:DBG:Travel.store")
+      log_debug("CL:DBG:Travel.store")
 
       // store the travel object (state lock)
       Storage.put(Storage.currentContext(), owner, this)
@@ -1060,19 +1063,19 @@ object HubContract : SmartContract() {
       val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKey)
       val newTravelsForCityPair = travelsForCityPair.concat(this)
       Storage.put(Storage.currentContext(), cityHashPairKey, newTravelsForCityPair)
-      Runtime.notify("CL:OK:StoredTravel", cityHashPair)
+      log_info("CL:OK:StoredTravel", cityHashPair)
 
       // increment city usage counters (for stats)
       stats_recordCityUsage(pickUpCityHash)
       stats_recordCityUsage(dropOffCityHash)
-      Runtime.notify("CL:DBG:UpdatedCityUsageStats", cityHashPair)
+      log_debug("CL:DBG:UpdatedCityUsageStats", cityHashPair)
 
       // reserve the security deposit
       // this will overwrite existing fund reservations for this wallet
       // it's here because the compiler doesn't like it being below the following block
       this.travel_reserveDeposit(owner)
 
-      Runtime.notify("CL:OK:ReservedTravelDeposit", cityHashPair)
+      log_info("CL:OK:ReservedTravelDeposit", cityHashPair)
 
       // find a demand object to match this travel with
       val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
@@ -1096,7 +1099,7 @@ object HubContract : SmartContract() {
             val timestampedOtherMatch = this.concat(nowTimeBytes)
             Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
 
-            Runtime.notify("CL:OK:MatchedTravelWithDemand")
+            log_info("CL:OK:MatchedTravelWithDemand")
 
             // re-reserve the non-expiring security deposit
             // unfortunately this line must be here due to compiler troubles with anything more complex
@@ -1115,18 +1118,16 @@ object HubContract : SmartContract() {
                val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
                demandOwner.wallet_storeFundReservations(rewrittenReservationList)
 
-               Runtime.notify("CL:OK:RewroteDemandFundsReservation")
+               log_info("CL:OK:RewroteDemandFundsReservation")
             } else {
                Runtime.notify("CL:ERR:ReservationForDemandNotFound")
             }
-         } else {
+         } else if (LOG_LEVEL > 2) {
             Runtime.notify("CL:DBG:NoMatchableDemandForTravel:1")
          }
-      } else {
+      } else if (LOG_LEVEL > 2) {
          Runtime.notify("CL:DBG:NoMatchableDemandForTravel:2")
       }
-
-      Runtime.notify("CL:RET:Travel.store")
       return true
    }
 
@@ -1209,7 +1210,7 @@ object HubContract : SmartContract() {
     * @return true if this [Travel] has been matched
     */
    private fun Travel.travel_isMatched(): Boolean {
-      Runtime.notify("CL:DBG:Travel.isMatched")
+      log_debug("CL:DBG:Travel.isMatched")
       val matchKey = this.travel_getMatchKey()
       val match = Storage.get(Storage.currentContext(), matchKey)
       return !match.isEmpty()
@@ -1344,6 +1345,40 @@ object HubContract : SmartContract() {
     * Returns the amount of funds reserved over time.
     */
    private fun stats_getReservedFundsCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_FUNDS))
+
+   //endregion
+
+   // -=============-
+   // -=  Logging  =-
+   // -=============-
+   //region logging
+
+   /**
+    * Dispatches a Runtime.notify with the specified args at the DEBUG level (3).
+    */
+   private fun log_debug(msg: String, arg0: ByteArray = byteArrayOf()) {
+      if (LOG_LEVEL < 3) return
+      if (!arg0.isEmpty()) Runtime.notify(msg, arg0)
+      else Runtime.notify(msg)
+   }
+
+   /**
+    * Dispatches a Runtime.notify with the specified args at INFO level (2).
+    */
+   private fun log_info(msg: String, arg0: ByteArray = byteArrayOf()) {
+      if (LOG_LEVEL < 2) return
+      if (!arg0.isEmpty()) Runtime.notify(msg, arg0)
+      else Runtime.notify(msg)
+   }
+
+   /**
+    * Dispatches a Runtime.notify with the specified args at the ERROR level (1).
+    */
+   private fun log_err(msg: String, arg0: ByteArray = byteArrayOf()) {
+      if (LOG_LEVEL < 1) return
+      if (!arg0.isEmpty()) Runtime.notify(msg, arg0)
+      else Runtime.notify(msg)
+   }
 
    //endregion
 

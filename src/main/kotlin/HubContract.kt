@@ -56,9 +56,12 @@ object HubContract : SmartContract() {
    private const val FEE_DEMAND_REWARD: Long = 300000000  // 3 GAS
    private const val FEE_TRAVEL_DEPOSIT: Long = 100000000  // 1 GAS
 
-   // Storage key suffixes
+   // Storage keys
    private const val STORAGE_KEY_SUFFIX_DEMAND: Byte = 1
    private const val STORAGE_KEY_SUFFIX_TRAVEL: Byte = 2
+   private const val STORAGE_KEY_STATS_DEMANDS = "demandsCounter"
+   private const val STORAGE_KEY_STATS_CITIES = "citiesCounter"
+   private const val STORAGE_KEY_STATS_FUNDS = "reservedFundsCounter"
 
    /**
     * The entry point of the smart contract.
@@ -110,6 +113,16 @@ object HubContract : SmartContract() {
       }
       //endregion
 
+      // Stats query operations
+      if (operation == "stats_getDemandsCount")
+         return stats_getDemandsCount()
+      if (operation == "stats_getCityUsageCount")
+         return stats_getCityUsageCount()
+      if (operation == "stats_getReservedFundsCount")
+         return stats_getReservedFundsCount()
+      if (operation == "storage_get")
+         return Storage.get(Storage.currentContext(), args[0])
+
       // Can't call IsInitialized() from here 'cause the compiler don't like it
       if (Storage.get(Storage.currentContext(), "Initialized").isEmpty()) {
          Runtime.notify("CL:ERR:HubNotInitialized")
@@ -160,8 +173,6 @@ object HubContract : SmartContract() {
       }
 
       // State query operations
-      if (operation == "storage_get")
-         return Storage.get(Storage.currentContext(), args[0])
       if (operation == "wallet_getState") {
          val stateKey = args[0].wallet_getStateStorageKey()
          return Storage.get(Storage.currentContext(), stateKey)
@@ -347,6 +358,11 @@ object HubContract : SmartContract() {
       val newReservations = reservations.concat(reservation)
       reservation.wallet_storeFundReservations(newReservations)
       Runtime.notify("CL:OK:ReservedFunds", reservation)
+
+      // add to accumulating stats counter
+      stats_recordReservedFunds(value)
+      Runtime.notify("CL:DBG:UpdatedReservedFundsStats", value)
+
       return true
    }
 
@@ -744,6 +760,14 @@ object HubContract : SmartContract() {
       Storage.put(Storage.currentContext(), cityHashPairKeyD, newDemandsForCity)
       Runtime.notify("CL:OK:StoredDemand", cityHashPair)
 
+      // increment city usage counters (for stats)
+      stats_recordCityUsage(pickUpCityHash)
+      stats_recordCityUsage(dropOffCityHash)
+      Runtime.notify("CL:DBG:UpdatedCityUsageStats", cityHashPair)
+
+      stats_recordDemand()
+      Runtime.notify("CL:DBG:UpdatedDemandStats", cityHashPair)
+
       // find a travel object to match this demand with
       val cityHashPairKeyT = cityHashPair.travel_getStorageKey()
       val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyT)
@@ -792,7 +816,7 @@ object HubContract : SmartContract() {
             this.demand_reserveValueAndFee(owner, matchedTravel)
 
             // switch the traveller's existing deposit reservation to a non-expiring one
-            // todo: NOT ENABLED for now, an expiring deposit is a solution to potential problems with unsatisfactory or impossible demands
+            // todo: Disabled for now, an expiring deposit is a solution to potential problems with unsatisfactory or impossible demands
             //       beyond the MVP we will be able to use a matching system to overcome the need for this
             // val traveller = matchedTravel.travel_getOwnerScriptHash()
             // matchedTravel.travel_reserveNonExpiringDeposit(traveller)
@@ -1036,8 +1060,12 @@ object HubContract : SmartContract() {
       val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKey)
       val newTravelsForCityPair = travelsForCityPair.concat(this)
       Storage.put(Storage.currentContext(), cityHashPairKey, newTravelsForCityPair)
-
       Runtime.notify("CL:OK:StoredTravel", cityHashPair)
+
+      // increment city usage counters (for stats)
+      stats_recordCityUsage(pickUpCityHash)
+      stats_recordCityUsage(dropOffCityHash)
+      Runtime.notify("CL:DBG:UpdatedCityUsageStats", cityHashPair)
 
       // reserve the security deposit
       // this will overwrite existing fund reservations for this wallet
@@ -1072,7 +1100,7 @@ object HubContract : SmartContract() {
 
             // re-reserve the non-expiring security deposit
             // unfortunately this line must be here due to compiler troubles with anything more complex
-            // todo: NOT ENABLED for now, an expiring deposit is a solution to potential problems with unsatisfactory or impossible demands
+            // todo: Disabled for now, an expiring deposit is a solution to potential problems with unsatisfactory or impossible demands
             //       beyond the MVP we will be able to use a matching system to overcome the need for this
             //this.travel_reserveNonExpiringDeposit(owner)
 
@@ -1257,6 +1285,68 @@ object HubContract : SmartContract() {
 
    //endregion
 
+   // -===========-
+   // -=  Stats  =-
+   // -===========-
+   //region stats
+
+   /**
+    * Increments the counter that keeps the number of [Demands] created over time.
+    *
+    * @see stats_getDemandsCount
+    */
+   private fun stats_recordDemand() {
+      val key = STORAGE_KEY_STATS_DEMANDS
+      val existing = BigInteger(Storage.get(Storage.currentContext(), key))
+      val accum = existing + BigInteger.valueOf(1)
+      Storage.put(Storage.currentContext(), key, accum)
+   }
+
+   /**
+    * Increments the counter that keeps the number of unique cities used over time.
+    *
+    * @see stats_getCityUsageCount
+    */
+   private fun stats_recordCityUsage(city: Hash160) {
+      val isRecorded = Storage.get(Storage.currentContext(), city)
+      if (!isRecorded.isEmpty()) return
+      val key = STORAGE_KEY_STATS_CITIES
+      val trueBytes = byteArrayOf(1)
+      val count = BigInteger(Storage.get(Storage.currentContext(), key))
+      Storage.put(Storage.currentContext(), key, count + BigInteger.valueOf(1))
+      Storage.put(Storage.currentContext(), city, trueBytes)  // don't count this city again
+   }
+
+   /**
+    * Increments the counter that keeps a count of all funds reserved over time.
+    *
+    * @see stats_getReservedFundsCount
+    * @param value the funds reserved this time
+    */
+   private fun stats_recordReservedFunds(value: BigInteger) {
+      val key = STORAGE_KEY_STATS_FUNDS
+      val existing = BigInteger(Storage.get(Storage.currentContext(), key))
+      val accum = existing + value
+      Storage.put(Storage.currentContext(), key, accum)
+   }
+
+   /**
+    * Returns the number of demands created over time.
+    */
+   private fun stats_getDemandsCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_DEMANDS))
+
+   /**
+    * Returns the number of unique cities used over time.
+    */
+   private fun stats_getCityUsageCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_CITIES))
+
+   /**
+    * Returns the amount of funds reserved over time.
+    */
+   private fun stats_getReservedFundsCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_FUNDS))
+
+   //endregion
+
    // -=================-
    // -=  Init Params  =-
    // -=================-
@@ -1342,12 +1432,12 @@ object HubContract : SmartContract() {
     * Converts a [BigInteger] to a padded [ByteArray].
     *
     * @see pad
-    * @param count the number of bytes to pad to
+    * @param padToSize the size in bytes to pad to
     * @return the padded byte array, able to be converted back to a [BigInteger] when needed
     */
-   fun BigInteger.toByteArray(count: Int): ByteArray {
+   fun BigInteger.toByteArray(padToSize: Int = 0): ByteArray {
       var bytes = this.toByteArray()
-      return bytes.pad(count)
+      return bytes.pad(padToSize)
    }
 
    //endregion

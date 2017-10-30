@@ -1,5 +1,5 @@
-﻿using System;
 using Neo.VM;
+using System;
 
 namespace CLTests {
    public class Crypto : ICrypto {

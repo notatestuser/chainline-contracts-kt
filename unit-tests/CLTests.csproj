@@ -8,14 +8,14 @@
 
   <ItemGroup>
     <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.3.0-preview-20170427-09" />
+    <PackageReference Include="Neo" Version="2.3.5" />
     <PackageReference Include="xunit" Version="2.2.0" />
     <PackageReference Include="xunit.runner.visualstudio" Version="2.2.0" />
   </ItemGroup>
 
   <ItemGroup>
     <Folder Include="Utilities\" />
-    <Folder Include="Tests\" />
-    <Folder Include="Misc\" />
+    <Folder Include="Neo\" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\vendor\neo-vm\src\neo-vm\neo-vm.csproj" />

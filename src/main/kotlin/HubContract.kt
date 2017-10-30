@@ -230,9 +230,7 @@ object HubContract : SmartContract() {
     *
     * @return true if the contract has been initialized
     */
-   private fun isInitialized(): Boolean {
-      return ! Storage.get(Storage.currentContext(), "Initialized").isEmpty()
-   }
+   private fun isInitialized() = ! Storage.get(Storage.currentContext(), "Initialized").isEmpty()
 
    /**
     * Initializes the smart contract. This takes three parts of the wallet script as arguments.
@@ -506,9 +504,7 @@ object HubContract : SmartContract() {
    /**
     * Gets the storage key used to store/lookup state information for a wallet.
     */
-   private fun ScriptHash.wallet_getStateStorageKey(): ByteArray {
-      return this
-   }
+   private fun ScriptHash.wallet_getStateStorageKey() = this
 
    //endregion
 
@@ -539,9 +535,7 @@ object HubContract : SmartContract() {
     * @param index the zero-based index of the [Reservation] to retrieve
     * @return the [Reservation], or an empty array if not found
     */
-   private fun ReservationList.res_getAt(index: Int): Reservation {
-      return this.range(index * RESERVATION_SIZE, RESERVATION_SIZE)
-   }
+   private fun ReservationList.res_getAt(index: Int): Reservation = this.range(index * RESERVATION_SIZE, RESERVATION_SIZE)
 
    /**
     * Finds the [reserved funds object][Reservation] with the given [value] in a [ReservationList].
@@ -817,9 +811,7 @@ object HubContract : SmartContract() {
     * @param index the zero-based index of the [Demand] to retrieve
     * @return the [Demand], or an empty array if not found
     */
-   private fun DemandList.demands_getAt(index: Int): Travel {
-      return this.range(index * DEMAND_SIZE, DEMAND_SIZE)
-   }
+   private fun DemandList.demands_getAt(index: Int): Travel = this.range(index * DEMAND_SIZE, DEMAND_SIZE)
 
    /**
     * Reserves the item's value and reward fee for a new demand.
@@ -929,10 +921,7 @@ object HubContract : SmartContract() {
     *
     * @return the owner's script hash
     */
-   private fun Demand.demand_getOwnerScriptHash(): ScriptHash {
-      val bytes = this.range(TIMESTAMP_SIZE + VALUE_SIZE, SCRIPT_HASH_SIZE)
-      return bytes
-   }
+   private fun Demand.demand_getOwnerScriptHash(): ScriptHash = this.range(TIMESTAMP_SIZE + VALUE_SIZE, SCRIPT_HASH_SIZE)
 
    /**
     * Gets the reputation score required of a [Travel] in order to match this [Demand].
@@ -989,10 +978,7 @@ object HubContract : SmartContract() {
     *
     * @return the storage key
     */
-   private fun Demand.demand_getMatchKey(): ByteArray {
-      val key = take(this, TIMESTAMP_SIZE + VALUE_SIZE)
-      return key
-   }
+   private fun Demand.demand_getMatchKey() = take(this, TIMESTAMP_SIZE + VALUE_SIZE)
 
    //endregion
 
@@ -1267,10 +1253,7 @@ object HubContract : SmartContract() {
     *
     * @return the storage key
     */
-   private fun Travel.travel_getMatchKey(): ByteArray {
-      val key = take(this, TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE)
-      return key
-   }
+   private fun Travel.travel_getMatchKey() = take(this, TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE)
 
    //endregion
 
@@ -1294,23 +1277,17 @@ object HubContract : SmartContract() {
    /**
     * Gets part 1 of the wallet script code (code before the public key), set at init time.
     */
-   private fun getWalletScriptP1(): ByteArray {
-      return Storage.get(Storage.currentContext(), "WalletScriptP1")
-   }
+   private fun getWalletScriptP1() = Storage.get(Storage.currentContext(), "WalletScriptP1")
 
    /**
     * Gets part 2 of the wallet script code (code after the public key, before the script hash), set at init time.
     */
-   private fun getWalletScriptP2(): ByteArray {
-      return Storage.get(Storage.currentContext(), "WalletScriptP2")
-   }
+   private fun getWalletScriptP2() = Storage.get(Storage.currentContext(), "WalletScriptP2")
 
    /**
     * Gets part 3 of the wallet script code (code after the script hash), set at init time.
     */
-   private fun getWalletScriptP3(): ByteArray {
-      return Storage.get(Storage.currentContext(), "WalletScriptP3")
-   }
+   private fun getWalletScriptP3() = Storage.get(Storage.currentContext(), "WalletScriptP3")
 
    //endregion
 
@@ -1325,9 +1302,7 @@ object HubContract : SmartContract() {
     * @param b2 the bytes to append
     * @return the combined byte array
     */
-   fun ByteArray.concat(b2: ByteArray): ByteArray {
-      return concat(this, b2)
-   }
+   fun ByteArray.concat(b2: ByteArray) = concat(this, b2)
 
    /**
     * Extracts a range of bytes from a [ByteArray].
@@ -1336,9 +1311,7 @@ object HubContract : SmartContract() {
     * @param count the number of bytes to extract, starting at [index]
     * @return the extracted bytes
     */
-   fun ByteArray.range(index: Int, count: Int): ByteArray {
-      return range(this, index, count)
-   }
+   fun ByteArray.range(index: Int, count: Int) = range(this, index, count)
 
    /**
     * Takes a number of bytes from the start of a [ByteArray].
@@ -1346,9 +1319,7 @@ object HubContract : SmartContract() {
     * @param count the number of bytes to take
     * @return the extracted bytes
     */
-   fun ByteArray.take(count: Int): ByteArray {
-      return take(this, count)
-   }
+   fun ByteArray.take(count: Int) = take(this, count)
 
    /**
     * Pads a [BigInteger] that has been converted to a [ByteArray] to a specified byte length.

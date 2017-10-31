@@ -1,4 +1,5 @@
 ﻿using Xunit.Abstractions;
+using Neo.Cryptography;
 using Neo.VM;
 using CLTests.Utilities;
 
@@ -16,7 +17,7 @@ namespace CLTests {
 
       protected ExecutionEngine LoadContract(string contractName) {
          byte[] program = ExecutionHelper.Compile(contractName);
-         var engine = new ExecutionEngine(null, new Crypto(), null, InteropService);
+         var engine = new ExecutionEngine(null, Crypto.Default, null, InteropService);
          engine.LoadScript(program);
          return engine;
       }

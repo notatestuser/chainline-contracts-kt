@@ -21,7 +21,9 @@ namespace CLTests.Utilities {
 
          output.WriteLine("Dumping evaluation stack:");
          foreach (StackItem item in engine.EvaluationStack) {
-            output.WriteLine(BitConverter.ToString(item.GetByteArray()));
+            try {
+               output.WriteLine(BitConverter.ToString(item.GetByteArray()));
+            } catch (Exception) {}
          }
 
          Assert.False(hasFaulted, "FAULT");

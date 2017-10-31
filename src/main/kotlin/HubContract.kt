@@ -60,9 +60,13 @@ object HubContract : SmartContract() {
    // Storage keys
    private const val STORAGE_KEY_SUFFIX_DEMAND: Byte = 1
    private const val STORAGE_KEY_SUFFIX_TRAVEL: Byte = 2
-   private const val STORAGE_KEY_STATS_DEMANDS = "demandsCounter"
-   private const val STORAGE_KEY_STATS_CITIES = "citiesCounter"
-   private const val STORAGE_KEY_STATS_FUNDS = "reservedFundsCounter"
+   private const val STORAGE_KEY_STATS_DEMANDS = "DemandsCounter"
+   private const val STORAGE_KEY_STATS_CITIES = "CitiesCounter"
+   private const val STORAGE_KEY_STATS_FUNDS = "ReservedFundsCounter"
+   private const val STORAGE_KEY_INIT_WALLETP1 = "WalletScriptP1"
+   private const val STORAGE_KEY_INIT_WALLETP2 = "WalletScriptP2"
+   private const val STORAGE_KEY_INIT_WALLETP3 = "WalletScriptP3"
+   private const val STORAGE_KEY_INITIALIZED = "Initialized"
 
    /**
     * The entry point of the smart contract.
@@ -83,6 +87,18 @@ object HubContract : SmartContract() {
       if (TESTS_ENABLED) {
          if (operation == "test_reservation_create")
             return reservation_create(BigInteger(args[0]), BigInteger(args[1]), args[2])
+         if (operation == "test_reservation_getExpiry")
+            return args[0].res_getExpiry()
+         if (operation == "test_reservation_getValue")
+            return args[0].res_getValue()
+         if (operation == "test_reservation_getRecipient")
+            return args[0].res_getRecipient()
+         if (operation == "test_reservation_getTotalOnHoldValue")
+            return args[0].res_getTotalOnHoldGasValue(1, true)
+         if (operation == "test_reservation_findBy")
+            return args[0].res_findBy(BigInteger(args[1]), args[2])
+         if (operation == "test_reservation_replaceRecipientAt")
+            return args[0].res_replaceRecipientAt((args[1] as Int?)!!, args[2])
          if (operation == "test_demand_create")
             return demand_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), args[5])
          if (operation == "test_demand_getItemValue")
@@ -99,18 +115,18 @@ object HubContract : SmartContract() {
             return args[0].travel_getOwnerScriptHash()
          if (operation == "test_travel_findMatchableTravel")
             return args[0].travel_findMatchableTravel(BigInteger(args[1]), BigInteger(args[2]), (args[3] as Int?)!!, true)
-         if (operation == "test_reservation_getExpiry")
-            return args[0].res_getExpiry()
-         if (operation == "test_reservation_getValue")
-            return args[0].res_getValue()
-         if (operation == "test_reservation_getRecipient")
-            return args[0].res_getRecipient()
-         if (operation == "test_reservation_getTotalOnHoldValue")
-            return args[0].res_getTotalOnHoldGasValue(1, true)
-         if (operation == "test_reservation_findBy")
-            return args[0].res_findBy(BigInteger(args[1]), args[2])
-         if (operation == "test_reservation_replaceRecipientAt")
-            return args[0].res_replaceRecipientAt((args[1] as Int?)!!, args[2])
+         if (operation == "test_stats_recordDemandCreation") {
+            stats_recordDemandCreation()
+            return true
+         }
+         if (operation == "test_stats_recordCityUsage") {
+            stats_recordCityUsage(args[0])
+            return true
+         }
+         if (operation == "test_stats_recordReservedFunds") {
+            stats_recordReservedFunds(BigInteger(args[0]))
+            return true
+         }
       }
       //endregion
 
@@ -125,7 +141,7 @@ object HubContract : SmartContract() {
          return Storage.get(Storage.currentContext(), args[0])
 
       // Can't call IsInitialized() from here 'cause the compiler don't like it
-      if (Storage.get(Storage.currentContext(), "Initialized").isEmpty()) {
+      if (Storage.get(Storage.currentContext(), STORAGE_KEY_INITIALIZED).isEmpty()) {
          Runtime.notify("CL:ERR:HubNotInitialized")
          return false
       }
@@ -242,7 +258,7 @@ object HubContract : SmartContract() {
     *
     * @return true if the contract has been initialized
     */
-   private fun isInitialized() = ! Storage.get(Storage.currentContext(), "Initialized").isEmpty()
+   private fun isInitialized() = ! Storage.get(Storage.currentContext(), STORAGE_KEY_INITIALIZED).isEmpty()
 
    /**
     * Initializes the smart contract. This takes three parts of the wallet script as arguments.
@@ -255,10 +271,10 @@ object HubContract : SmartContract() {
    private fun init(walletScriptP1: ByteArray, walletScriptP2: ByteArray, walletScriptP3: ByteArray): Boolean {
       if (isInitialized()) return false
       val trueBytes = byteArrayOf(1)
-      Storage.put(Storage.currentContext(), "WalletScriptP1", walletScriptP1)
-      Storage.put(Storage.currentContext(), "WalletScriptP2", walletScriptP2)
-      Storage.put(Storage.currentContext(), "WalletScriptP3", walletScriptP3)
-      Storage.put(Storage.currentContext(), "Initialized", trueBytes)
+      Storage.put(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP1, walletScriptP1)
+      Storage.put(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP2, walletScriptP2)
+      Storage.put(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP3, walletScriptP3)
+      Storage.put(Storage.currentContext(), STORAGE_KEY_INITIALIZED, trueBytes)
       log_info("CL:OK:HubInitialized")
       return true
    }
@@ -767,7 +783,7 @@ object HubContract : SmartContract() {
       stats_recordCityUsage(dropOffCityHash)
       log_debug("CL:DBG:UpdatedCityUsageStats", cityHashPair)
 
-      stats_recordDemand()
+      stats_recordDemandCreation()
       log_debug("CL:DBG:UpdatedDemandStats", cityHashPair)
 
       // find a travel object to match this demand with
@@ -1296,11 +1312,15 @@ object HubContract : SmartContract() {
     *
     * @see stats_getDemandsCount
     */
-   private fun stats_recordDemand() {
+   private fun stats_recordDemandCreation() {
       val key = STORAGE_KEY_STATS_DEMANDS
-      val existing = BigInteger(Storage.get(Storage.currentContext(), key))
-      val accum = existing + BigInteger.valueOf(1)
-      Storage.put(Storage.currentContext(), key, accum)
+      val existingBytes = Storage.get(Storage.currentContext(), key)
+      if (!existingBytes.isEmpty()) {
+         var existing = BigInteger(existingBytes)
+         Storage.put(Storage.currentContext(), key, existing + BigInteger.valueOf(1))
+      } else {
+         Storage.put(Storage.currentContext(), key, BigInteger.valueOf(1))
+      }
    }
 
    /**
@@ -1313,8 +1333,13 @@ object HubContract : SmartContract() {
       if (!isRecorded.isEmpty()) return
       val key = STORAGE_KEY_STATS_CITIES
       val trueBytes = byteArrayOf(1)
-      val count = BigInteger(Storage.get(Storage.currentContext(), key))
-      Storage.put(Storage.currentContext(), key, count + BigInteger.valueOf(1))
+      val existingBytes = Storage.get(Storage.currentContext(), key)
+      if (!existingBytes.isEmpty()) {
+         val existing = BigInteger(existingBytes)
+         Storage.put(Storage.currentContext(), key, existing + BigInteger.valueOf(1))
+      } else {
+         Storage.put(Storage.currentContext(), key, BigInteger.valueOf(1))
+      }
       Storage.put(Storage.currentContext(), city, trueBytes)  // don't count this city again
    }
 
@@ -1326,9 +1351,13 @@ object HubContract : SmartContract() {
     */
    private fun stats_recordReservedFunds(value: BigInteger) {
       val key = STORAGE_KEY_STATS_FUNDS
-      val existing = BigInteger(Storage.get(Storage.currentContext(), key))
-      val accum = existing + value
-      Storage.put(Storage.currentContext(), key, accum)
+      val existingBytes = Storage.get(Storage.currentContext(), key)
+      if (!existingBytes.isEmpty()) {
+         val existing = BigInteger(existingBytes)
+         Storage.put(Storage.currentContext(), key, existing + value)
+      } else {
+         Storage.put(Storage.currentContext(), key, value)
+      }
    }
 
    /**
@@ -1402,17 +1431,17 @@ object HubContract : SmartContract() {
    /**
     * Gets part 1 of the wallet script code (code before the public key), set at init time.
     */
-   private fun getWalletScriptP1() = Storage.get(Storage.currentContext(), "WalletScriptP1")
+   private fun getWalletScriptP1() = Storage.get(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP1)
 
    /**
     * Gets part 2 of the wallet script code (code after the public key, before the script hash), set at init time.
     */
-   private fun getWalletScriptP2() = Storage.get(Storage.currentContext(), "WalletScriptP2")
+   private fun getWalletScriptP2() = Storage.get(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP2)
 
    /**
     * Gets part 3 of the wallet script code (code after the script hash), set at init time.
     */
-   private fun getWalletScriptP3() = Storage.get(Storage.currentContext(), "WalletScriptP3")
+   private fun getWalletScriptP3() = Storage.get(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP3)
 
    //endregion
 

@@ -50,7 +50,7 @@ object WalletContract : SmartContract() {
       val tx = ExecutionEngine.scriptContainer() as Transaction?
       val executingScriptHash = ExecutionEngine.executingScriptHash()
       val outputs = tx!!.outputs()
-      var gasTxValue: Long = 0
+      var gasTxValue: Long = 0  // as a fixed8 int
       outputs.forEach {
          if (it.scriptHash() == executingScriptHash &&
                it.assetId() == gasAssetId)

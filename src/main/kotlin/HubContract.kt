@@ -308,7 +308,7 @@ object HubContract : SmartContract() {
    /**
     * Gets the GAS balance of a user wallet.
     *
-    * @return the GAS balance
+    * @return the GAS balance as a fixed8 int
     */
    private fun ScriptHash.wallet_getGasBalance(): Long {
       val account = Blockchain.getAccount(this)
@@ -320,7 +320,7 @@ object HubContract : SmartContract() {
     * Requests permission to perform a withdrawal from a previously validated user wallet.
     * Note: Please ensure that the wallet has been validated before this is called.
     *
-    * @param value the outgoing value of the transaction
+    * @param value the outgoing value of the transaction as a fixed8 int
     * @param reservations the list of [reserved funds objects][Reservation] for the wallet
     * @return true if the transaction was cleared
     */
@@ -345,7 +345,7 @@ object HubContract : SmartContract() {
     * Note: Please ensure that the wallet has been validated before this is called.
     *
     * @param expiry timestamp of when the reserved funds get released automatically
-    * @param value the amount of GAS to hold in the reservation
+    * @param value the amount of GAS to hold in the reservation as a fixed8 int
     * @param recipient the recipient wallet that the funds are reserved for
     * @param overwrite true if existing reserved funds should be overwritten for this wallet
     * @return true on success
@@ -388,7 +388,7 @@ object HubContract : SmartContract() {
     *
     * @see wallet_reserveFunds
     * @param expiry timestamp of when the reserved funds get released automatically
-    * @param value the amount of GAS to withhold in the reservation
+    * @param value the amount of GAS to withhold in the reservation as a fixed8 int
     * @param overwrite true if existing reserved funds should be overwritten for this wallet
     * @return true on success
     *
@@ -407,7 +407,7 @@ object HubContract : SmartContract() {
     * If the transaction or reserved funds cannot be found this method will fail and return false.
     *
     * @param recipient the recipient of the reserved funds
-    * @param value the GAS value of the reserved funds
+    * @param value the GAS value of the reserved funds as a fixed8 int
     * @param txHash the transaction hash
     * @return true on success
     */
@@ -550,7 +550,7 @@ object HubContract : SmartContract() {
     * Creates a [reserved funds object][Reservation].
     *
     * @param expiry timestamp of when the reserved funds get released automatically
-    * @param value the amount of GAS to hold in the reservation
+    * @param value the amount of GAS to hold in the reservation as a fixed8 int
     * @param recipient the recipient wallet that the funds are reserved for
     * @return the [reserved funds object][Reservation]
     */
@@ -573,7 +573,7 @@ object HubContract : SmartContract() {
    /**
     * Finds the [reserved funds object][Reservation] with the given [value] in a [ReservationList].
     *
-    * @param value the value to match
+    * @param value the value to match as a fixed8 int
     * @return the index at which the [Reservation] is at in the [ReservationList]
     */
    private fun ReservationList.res_findBy(value: BigInteger): Int {
@@ -595,7 +595,7 @@ object HubContract : SmartContract() {
    /**
     * Finds the [reserved funds object][Reservation] with the given [value] and [recipient] in a [ReservationList].
     *
-    * @param value the value to match
+    * @param value the value to match as a fixed8 int
     * @param recipient the recipient to match (AND)
     * @return the index at which the [Reservation] is at in the [ReservationList]
     */
@@ -730,7 +730,7 @@ object HubContract : SmartContract() {
     * @param expiry the time that the demand expires as a unix timestamp
     * @param repRequired the reputation required of a traveller in order for this demand to be matched
     * @param itemSize the size of the item (on a scale of 1-5)
-    * @param itemValue the value of the item in GAS
+    * @param itemValue the value of the item in GAS as a fixed8 int
     * @param infoBlob a 128 character string describing the desired item and the demand owner's contact details
     */
    private fun demand_create(owner: ScriptHash, expiry: BigInteger, repRequired: BigInteger, itemSize: BigInteger,
@@ -939,7 +939,7 @@ object HubContract : SmartContract() {
    /**
     * Gets the desired item's value.
     *
-    * @return the item's GAS value
+    * @return the item's GAS value as a fixed8 int
     */
    private fun Demand.demand_getItemValue(): BigInteger {
       val bytes = this.range(TIMESTAMP_SIZE, VALUE_SIZE)
@@ -949,7 +949,7 @@ object HubContract : SmartContract() {
    /**
     * Gets the [Demand]'s total value (item value + reward fee).
     *
-    * @return the demand's GAS value
+    * @return the demand's GAS value as a fixed8 int
     */
    private fun Demand.demand_getTotalValue(): BigInteger {
       val bytes = this.range(TIMESTAMP_SIZE, VALUE_SIZE)
@@ -1347,7 +1347,7 @@ object HubContract : SmartContract() {
     * Increments the counter that keeps a count of all funds reserved over time.
     *
     * @see stats_getReservedFundsCount
-    * @param value the funds reserved this time
+    * @param value the funds reserved this time as a fixed8 int
     */
    private fun stats_recordReservedFunds(value: BigInteger) {
       val key = STORAGE_KEY_STATS_FUNDS
@@ -1371,7 +1371,7 @@ object HubContract : SmartContract() {
    private fun stats_getCityUsageCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_CITIES))
 
    /**
-    * Returns the amount of funds reserved over time.
+    * Returns the amount of funds reserved over time as a fixed8 int.
     */
    private fun stats_getReservedFundsCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_FUNDS))
 

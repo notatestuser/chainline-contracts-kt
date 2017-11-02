@@ -78,52 +78,52 @@ object HubContract : SmartContract() {
       // The entry points for each of the supported operations follow
 
       // Initialization
-      if (operation == "initialize")
+      if (operation === "initialize")
          return init(args[0], args[1], args[2])
-      if (operation == "is_initialized")
+      if (operation === "is_initialized")
          return isInitialized()
 
       //region Test operations
       if (TESTS_ENABLED) {
-         if (operation == "test_reservation_create")
+         if (operation === "test_reservation_create")
             return reservation_create(BigInteger(args[0]), BigInteger(args[1]), args[2])
-         if (operation == "test_reservation_getExpiry")
+         if (operation === "test_reservation_getExpiry")
             return args[0].res_getExpiry()
-         if (operation == "test_reservation_getValue")
+         if (operation === "test_reservation_getValue")
             return args[0].res_getValue()
-         if (operation == "test_reservation_getRecipient")
+         if (operation === "test_reservation_getRecipient")
             return args[0].res_getRecipient()
-         if (operation == "test_reservation_getTotalOnHoldValue")
+         if (operation === "test_reservation_getTotalOnHoldValue")
             return args[0].res_getTotalOnHoldGasValue(1, true)
-         if (operation == "test_reservation_findBy")
+         if (operation === "test_reservation_findBy")
             return args[0].res_findBy(BigInteger(args[1]), args[2])
-         if (operation == "test_reservation_replaceRecipientAt")
+         if (operation === "test_reservation_replaceRecipientAt")
             return args[0].res_replaceRecipientAt((args[1] as Int?)!!, args[2])
-         if (operation == "test_demand_create")
+         if (operation === "test_demand_create")
             return demand_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), args[5])
-         if (operation == "test_demand_getItemValue")
+         if (operation === "test_demand_getItemValue")
             return args[0].demand_getItemValue()
-         if (operation == "test_demand_getInfoBlob")
+         if (operation === "test_demand_getInfoBlob")
             return args[0].demand_getInfoBlob()
-         if (operation == "test_demand_findMatchableDemand")
+         if (operation === "test_demand_findMatchableDemand")
             return args[0].demands_findMatchableDemand(BigInteger(args[1]), BigInteger(args[2]), (args[3] as Int?)!!, true)
-         if (operation == "test_travel_create")
+         if (operation === "test_travel_create")
             return travel_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]))
-         if (operation == "test_travel_getCarrySpace")
+         if (operation === "test_travel_getCarrySpace")
             return args[0].travel_getCarrySpace()
-         if (operation == "test_travel_getOwnerScriptHash")
+         if (operation === "test_travel_getOwnerScriptHash")
             return args[0].travel_getOwnerScriptHash()
-         if (operation == "test_travel_findMatchableTravel")
+         if (operation === "test_travel_findMatchableTravel")
             return args[0].travel_findMatchableTravel(BigInteger(args[1]), BigInteger(args[2]), (args[3] as Int?)!!, true)
-         if (operation == "test_stats_recordDemandCreation") {
+         if (operation === "test_stats_recordDemandCreation") {
             stats_recordDemandCreation()
             return true
          }
-         if (operation == "test_stats_recordCityUsage") {
+         if (operation === "test_stats_recordCityUsage") {
             stats_recordCityUsage(args[0])
             return true
          }
-         if (operation == "test_stats_recordReservedFunds") {
+         if (operation === "test_stats_recordReservedFunds") {
             stats_recordReservedFunds(BigInteger(args[0]))
             return true
          }
@@ -131,13 +131,13 @@ object HubContract : SmartContract() {
       //endregion
 
       // Stats query operations
-      if (operation == "stats_getDemandsCount")
+      if (operation === "stats_getDemandsCount")
          return stats_getDemandsCount()
-      if (operation == "stats_getCityUsageCount")
+      if (operation === "stats_getCityUsageCount")
          return stats_getCityUsageCount()
-      if (operation == "stats_getReservedFundsCount")
+      if (operation === "stats_getReservedFundsCount")
          return stats_getReservedFundsCount()
-      if (operation == "storage_get")
+      if (operation === "storage_get")
          return Storage.get(Storage.currentContext(), args[0])
 
       // Can't call IsInitialized() from here 'cause the compiler don't like it
@@ -147,21 +147,21 @@ object HubContract : SmartContract() {
       }
 
       // Wallet query operations
-      if (operation == "wallet_validate")
+      if (operation === "wallet_validate")
          return args[0].wallet_validate(args[1])
-      if (operation == "wallet_getReputationScore")
+      if (operation === "wallet_getReputationScore")
          return args[0].wallet_getReputationScore()
-      if (operation == "wallet_getGasBalance")
+      if (operation === "wallet_getGasBalance")
          return args[0].wallet_getGasBalance()
-       if (operation == "wallet_getReservedGasBalance") {
+       if (operation === "wallet_getReservedGasBalance") {
           val reservations = Storage.get(Storage.currentContext(), args[0])
           if (reservations.isEmpty()) return 0
           val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
           return reservations.res_getTotalOnHoldGasValue(nowTime)
        }
-      if (operation == "wallet_getFundReservations")
+      if (operation === "wallet_getFundReservations")
          return args[0].wallet_getFundReservations()
-      if (operation == "wallet_requestTxOut") {
+      if (operation === "wallet_requestTxOut") {
          if (args[0].wallet_validate(args[1])) {
             val reservations = args[0].wallet_getFundReservations()
             return args[0].wallet_requestTxOut(BigInteger(args[3]), reservations)
@@ -169,7 +169,7 @@ object HubContract : SmartContract() {
          Runtime.notify("CL:ERR:InvalidWallet")  // the compiler does not like log_* here
          return false
       }
-      if (operation == "wallet_setReservationPaidToRecipientTxHash") {
+      if (operation === "wallet_setReservationPaidToRecipientTxHash") {
          if (args[0].wallet_validate(args[1])) {
             val check = args[0].wallet_setReservationPaidToRecipientTxHash(args[2], BigInteger(args[3]), args[4])
             if (check) {
@@ -190,32 +190,32 @@ object HubContract : SmartContract() {
       }
 
       // State query operations
-      if (operation == "wallet_getState") {
+      if (operation === "wallet_getState") {
          val stateKey = args[0].wallet_getStateStorageKey()
          return Storage.get(Storage.currentContext(), stateKey)
       }
-      if (operation == "demand_isMatched")
+      if (operation === "demand_isMatched")
          return args[0].demand_isMatched()
-      if (operation == "demand_getMatchKey")
+      if (operation === "demand_getMatchKey")
          return args[0].demand_getMatchKey()
-      if (operation == "demand_getTravelMatch") {
+      if (operation === "demand_getTravelMatch") {
          val matchKey = args[0].demand_getMatchKey()
          return Storage.get(Storage.currentContext(), matchKey)
       }
-      if (operation == "demand_getTravelMatchedAtTime") {
+      if (operation === "demand_getTravelMatchedAtTime") {
          val matchKey = args[0].demand_getMatchKey()
          val travel = Storage.get(Storage.currentContext(), matchKey)
          return travel.travel_getMatchedAtTime()
       }
-      if (operation == "travel_isMatched")
+      if (operation === "travel_isMatched")
          return args[0].travel_isMatched()
-      if (operation == "travel_getMatchKey")
+      if (operation === "travel_getMatchKey")
          return args[0].travel_getMatchKey()
-      if (operation == "travel_getDemandMatch") {
+      if (operation === "travel_getDemandMatch") {
          val matchKey = args[0].travel_getMatchKey()
          return Storage.get(Storage.currentContext(), matchKey)
       }
-      if (operation == "travel_getDemandMatchedAtTime") {
+      if (operation === "travel_getDemandMatchedAtTime") {
          val matchKey = args[0].travel_getMatchKey()
          val demand = Storage.get(Storage.currentContext(), matchKey)
          return demand.demand_getMatchedAtTime()
@@ -227,7 +227,7 @@ object HubContract : SmartContract() {
       Runtime.notify("CL:OK:checkWitness")  // the compiler does not like log_* here
 
       // Open and try to match a Demand
-      if (operation == "demand_open") {
+      if (operation === "demand_open") {
          if (args[0].wallet_validate(args[1]) &&
                args[0].wallet_canOpenDemandOrTravel()) {
             val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6])
@@ -236,7 +236,7 @@ object HubContract : SmartContract() {
          return false
       }
       // Open and try to match a Travel
-      if (operation == "travel_open") {
+      if (operation === "travel_open") {
          if (args[0].wallet_validate(args[1]) &&
                args[0].wallet_canOpenDemandOrTravel()) {
             val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]))
@@ -299,7 +299,7 @@ object HubContract : SmartContract() {
                .concat(ExecutionEngine.executingScriptHash())
                .concat(getWalletScriptP3())
       val expectedScriptHash = hash160(expectedScript)
-      if (this == expectedScriptHash)
+      if (this === expectedScriptHash)
          return true
       Runtime.notify("CL:ERR:WalletValidateFail", expectedScriptHash, expectedScript)  // the compiler does not like log_* here
       return false
@@ -424,7 +424,7 @@ object HubContract : SmartContract() {
             val outputs = tx!!.outputs()
             var txValue: Long = 0
             outputs.forEach {
-               if (it.scriptHash() == recipient)
+               if (it.scriptHash() === recipient)
                   txValue += it.value()
             }
             if (txValue >= value.toLong()) {
@@ -585,7 +585,7 @@ object HubContract : SmartContract() {
          val reservation = this.res_getAt(i)
          val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
          val valueFound = BigInteger(valueBytes)
-         if (value == valueFound)
+         if (value == valueFound)  // uses `==` to force a numeric, not a raw byte array, equality check
             return i
          i++
       }
@@ -609,8 +609,8 @@ object HubContract : SmartContract() {
          val valueBytes = range(reservation, TIMESTAMP_SIZE, VALUE_SIZE)
          val valueFound = BigInteger(valueBytes)
          val recipientFound = reservation.res_getRecipient()
-         if (value == valueFound &&
-               recipient == recipientFound)
+         if (value == valueFound &&  // uses `==` to force a numeric, not a raw byte array, equality check
+               recipient === recipientFound)
             return i
          i++
       }
@@ -704,7 +704,7 @@ object HubContract : SmartContract() {
     */
    private fun Reservation.res_wasPaidToRecipient(): Boolean {
       val stored = Storage.get(Storage.currentContext(), this)
-      if (stored.size == TX_HASH_SIZE)
+      if (stored.size == TX_HASH_SIZE)  // `==` for a numeric equality check
          return true
       return false
    }

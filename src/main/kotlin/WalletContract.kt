@@ -43,7 +43,7 @@ object WalletContract : SmartContract() {
          return false
 
       // Ensure that we are processing a withdrawal
-      if (Runtime.trigger() != TriggerType.Verification)
+      if (Runtime.trigger() !== TriggerType.Verification)
          return true
 
       // Get the GAS value in tx outputs
@@ -52,16 +52,15 @@ object WalletContract : SmartContract() {
       val outputs = tx!!.outputs()
       var gasTxValue: Long = 0  // as a fixed8 int
       outputs.forEach {
-         if (it.scriptHash() == executingScriptHash &&
-               it.assetId() == gasAssetId)
+         if (it.scriptHash() === executingScriptHash &&
+               it.assetId() === gasAssetId)
             gasTxValue += it.value()
       }
 
       // Call the HubContract to validate the withdrawal
       if (gasTxValue > 0) {
          val recipient = outputs[0].scriptHash()
-         val allow = HubContract("wallet_requestTxOut", signature, ownerPubKey, recipient, gasTxValue)
-         return allow
+         return HubContract("wallet_requestTxOut", signature, ownerPubKey, recipient, gasTxValue)
       }
 
       return true

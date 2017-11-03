@@ -221,9 +221,9 @@ object HubContract : SmartContract() {
          return demand.demand_getMatchedAtTime()
       }
 
-      // The following operations can write state
-      if (! Runtime.checkWitness(args[0]))
-         return false
+      // The following operations can write state, so checkWitness
+      val sender: ScriptHash = args[0]
+      throwIfNot(Runtime.checkWitness(sender))  // kotlin workaround
       Runtime.notify("CL:OK:checkWitness")  // the compiler does not like log_* here
 
       // Open and try to match a Demand
@@ -1503,6 +1503,16 @@ object HubContract : SmartContract() {
       var bytes = this.toByteArray()
       return bytes.pad(padToSize)
    }
+
+   //endregion
+
+   // -==========-
+   // -=  Misc  =-
+   // -==========-
+   //region misc
+
+   @OpCode(org.neo.vm._OpCode.THROWIFNOT)
+   private external fun throwIfNot(ret: Any)
 
    //endregion
 }

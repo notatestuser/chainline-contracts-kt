@@ -11,7 +11,6 @@ namespace CLTests {
       [Fact]
       public void TestGetDemandStatsZero() {
          ExecutionEngine engine = LoadContract("HubContract");
-
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(0);
             sb.Emit(OpCode.PACK);
@@ -25,19 +24,22 @@ namespace CLTests {
       [Fact]
       public void TestGetDemandStatsNonZero() {
          ExecutionEngine engine = LoadContract("HubContract");
-
          using (ScriptBuilder sb = new ScriptBuilder()) {
             // record a demand, get back the recorded stat
             sb.EmitPush(0);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_stats_recordDemandCreation");  // operation
             ExecuteScript(engine, sb);
+         }
+         ExecutionEngine engine2 = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(0);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("stats_getDemandsCount");
-            ExecuteScript(engine, sb);
+            ExecuteScript(engine2, sb);
          }
-         var result = engine.EvaluationStack.Peek().GetBigInteger();
+
+         var result = engine2.EvaluationStack.Peek().GetBigInteger();
          Assert.Equal(1, result);
       }
 
@@ -57,17 +59,19 @@ namespace CLTests {
       [Fact]
       public void TestCityUsageStatsNonZero() {
          ExecutionEngine engine = LoadContract("HubContract");
-
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(new byte[] { 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 });
             sb.EmitPush(1);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_stats_recordCityUsage");  // operation
             ExecuteScript(engine, sb);
+         }
+         ExecutionEngine engine2 = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(0);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("stats_getCityUsageCount");
-            ExecuteScript(engine, sb);
+            ExecuteScript(engine2, sb);
          }
          var result = engine.EvaluationStack.Peek().GetBigInteger();
          Assert.Equal(1, result);

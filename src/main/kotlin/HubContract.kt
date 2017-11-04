@@ -63,9 +63,9 @@ object HubContract : SmartContract() {
    private const val STORAGE_KEY_STATS_DEMANDS = "DemandsCounter"
    private const val STORAGE_KEY_STATS_CITIES = "CitiesCounter"
    private const val STORAGE_KEY_STATS_FUNDS = "ReservedFundsCounter"
-   private const val STORAGE_KEY_INIT_WALLETP1 = "WalletScriptP1"
-   private const val STORAGE_KEY_INIT_WALLETP2 = "WalletScriptP2"
-   private const val STORAGE_KEY_INIT_WALLETP3 = "WalletScriptP3"
+   private const val STORAGE_KEY_INIT_WALLET_P1 = "WalletScriptP1"
+   private const val STORAGE_KEY_INIT_WALLET_P2 = "WalletScriptP2"
+   private const val STORAGE_KEY_INIT_WALLET_P3 = "WalletScriptP3"
    private const val STORAGE_KEY_INITIALIZED = "Initialized"
 
    /**
@@ -78,13 +78,17 @@ object HubContract : SmartContract() {
       // The entry points for each of the supported operations follow
 
       // Initialization
-      if (operation === "initialize")
-         return init(args[0], args[1], args[2])
+      if (operation === "initialize") {
+         initialize(args[0], args[1], args[2])
+         return true
+      }
       if (operation === "is_initialized")
          return isInitialized()
 
       //region Test operations
       if (TESTS_ENABLED) {
+         if (operation === "test_initialize_getP1")
+            return getWalletScriptP1()
          if (operation === "test_reservation_create")
             return reservation_create(BigInteger(args[0]), BigInteger(args[1]), args[2])
          if (operation === "test_reservation_getExpiry")
@@ -166,7 +170,7 @@ object HubContract : SmartContract() {
             val reservations = args[0].wallet_getFundReservations()
             return args[0].wallet_requestTxOut(BigInteger(args[3]), reservations)
          }
-         Runtime.notify("CL:ERR:InvalidWallet")  // the compiler does not like log_* here
+         Runtime.notify("CL:ERR:InvalidWallet")
          return false
       }
       if (operation === "wallet_setReservationPaidToRecipientTxHash") {
@@ -224,7 +228,7 @@ object HubContract : SmartContract() {
       // The following operations can write state, so checkWitness
       val sender: ScriptHash = args[0]
       throwIfNot(Runtime.checkWitness(sender))  // kotlin workaround
-      Runtime.notify("CL:OK:checkWitness")  // the compiler does not like log_* here
+      log_info("CL:OK:checkWitness")
 
       // Open and try to match a Demand
       if (operation === "demand_open") {
@@ -254,30 +258,30 @@ object HubContract : SmartContract() {
    //region initialization
 
    /**
-    * Checks whether the contract has been initialized.
-    *
-    * @return true if the contract has been initialized
-    */
-   private fun isInitialized() = ! Storage.get(Storage.currentContext(), STORAGE_KEY_INITIALIZED).isEmpty()
-
-   /**
-    * Initializes the smart contract. This takes three parts of the wallet script as arguments.
-    * This is then used to verify the integrity of user wallets as they are used in the system.
+    * Initializes the smart contract. This takes the three parts of the wallet script as arguments.
+    * These parts are stored and then used to verify the integrity of user wallets in the system.
     *
     * @param walletScriptP1 part 1 of the wallet script code (code before the public key)
     * @param walletScriptP2 part 2 of the wallet script code (code after the public key, before the script hash)
     * @param walletScriptP3 part 3 of the wallet script code (code after the script hash)
     */
-   private fun init(walletScriptP1: ByteArray, walletScriptP2: ByteArray, walletScriptP3: ByteArray): Boolean {
+   private fun initialize(walletScriptP1: ByteArray, walletScriptP2: ByteArray, walletScriptP3: ByteArray): Boolean {
       if (isInitialized()) return false
       val trueBytes = byteArrayOf(1)
-      Storage.put(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP1, walletScriptP1)
-      Storage.put(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP2, walletScriptP2)
-      Storage.put(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP3, walletScriptP3)
+      Storage.put(Storage.currentContext(), STORAGE_KEY_INIT_WALLET_P1, walletScriptP1)
+      Storage.put(Storage.currentContext(), STORAGE_KEY_INIT_WALLET_P2, walletScriptP2)
+      Storage.put(Storage.currentContext(), STORAGE_KEY_INIT_WALLET_P3, walletScriptP3)
       Storage.put(Storage.currentContext(), STORAGE_KEY_INITIALIZED, trueBytes)
       log_info("CL:OK:HubInitialized")
       return true
    }
+
+   /**
+    * Checks whether the contract has been initialized.
+    *
+    * @return true if the contract has been initialized
+    */
+   private fun isInitialized() = ! Storage.get(Storage.currentContext(), STORAGE_KEY_INITIALIZED).isEmpty()
 
    //endregion
 
@@ -312,7 +316,7 @@ object HubContract : SmartContract() {
     */
    private fun ScriptHash.wallet_getGasBalance(): Long {
       val account = Blockchain.getAccount(this)
-      if (LOG_LEVEL > 1) Runtime.notify("CL:OK:FoundWallet", account.scriptHash())  // compiler woes
+      log_info("CL:OK:FoundWallet", account.scriptHash())  // compiler woes
       return account.getBalance(getAssetId())
    }
 
@@ -332,10 +336,9 @@ object HubContract : SmartContract() {
       val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
       val effectiveBalance = balance - gasOnHold
       if (effectiveBalance < value.toLong()) {
-         log_err("CL:ERR:InsufficientBalance")
+         Runtime.notify("CL:ERR:InsufficientBalance")
          return false  // insufficient non-reserved funds
       }
-      if (LOG_LEVEL > 1) Runtime.notify("CL:OK:RequestTxOut1")  // compiler woes
       return true
    }
 
@@ -752,7 +755,6 @@ object HubContract : SmartContract() {
          Runtime.notify("CL:ERR:UnexpectedDemandSize")  // compiler woes
          return nil
       }
-      if (LOG_LEVEL > 1) Runtime.notify("CL:OK:DemandCreated")
       return demand
    }
 
@@ -1055,7 +1057,6 @@ object HubContract : SmartContract() {
          Runtime.notify("CL:ERR:UnexpectedTravelSize")
          return nil
       }
-      if (LOG_LEVEL > 1) Runtime.notify("CL:OK:TravelCreated")  // compiler woes
       return travel
    }
 
@@ -1268,8 +1269,7 @@ object HubContract : SmartContract() {
     * @return the owner of the [Travel]
     */
    private fun Travel.travel_getOwnerScriptHash(): ScriptHash {
-      val bytes = this.range(TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, SCRIPT_HASH_SIZE)
-      return bytes
+      return this.range(TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE, SCRIPT_HASH_SIZE)
    }
 
    /**
@@ -1377,40 +1377,6 @@ object HubContract : SmartContract() {
 
    //endregion
 
-   // -=============-
-   // -=  Logging  =-
-   // -=============-
-   //region logging
-
-   /**
-    * Dispatches a Runtime.notify with the specified args at the DEBUG level (3).
-    */
-   private fun log_debug(msg: String, arg0: ByteArray = byteArrayOf()) {
-      if (LOG_LEVEL < 3) return
-      if (!arg0.isEmpty()) Runtime.notify(msg, arg0)
-      else Runtime.notify(msg)
-   }
-
-   /**
-    * Dispatches a Runtime.notify with the specified args at INFO level (2).
-    */
-   private fun log_info(msg: String, arg0: ByteArray = byteArrayOf()) {
-      if (LOG_LEVEL < 2) return
-      if (!arg0.isEmpty()) Runtime.notify(msg, arg0)
-      else Runtime.notify(msg)
-   }
-
-   /**
-    * Dispatches a Runtime.notify with the specified args at the ERROR level (1).
-    */
-   private fun log_err(msg: String, arg0: ByteArray = byteArrayOf()) {
-      if (LOG_LEVEL < 1) return
-      if (!arg0.isEmpty()) Runtime.notify(msg, arg0)
-      else Runtime.notify(msg)
-   }
-
-   //endregion
-
    // -=================-
    // -=  Init Params  =-
    // -=================-
@@ -1431,17 +1397,17 @@ object HubContract : SmartContract() {
    /**
     * Gets part 1 of the wallet script code (code before the public key), set at init time.
     */
-   private fun getWalletScriptP1() = Storage.get(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP1)
+   private fun getWalletScriptP1() = Storage.get(Storage.currentContext(), STORAGE_KEY_INIT_WALLET_P1)
 
    /**
     * Gets part 2 of the wallet script code (code after the public key, before the script hash), set at init time.
     */
-   private fun getWalletScriptP2() = Storage.get(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP2)
+   private fun getWalletScriptP2() = Storage.get(Storage.currentContext(), STORAGE_KEY_INIT_WALLET_P2)
 
    /**
     * Gets part 3 of the wallet script code (code after the script hash), set at init time.
     */
-   private fun getWalletScriptP3() = Storage.get(Storage.currentContext(), STORAGE_KEY_INIT_WALLETP3)
+   private fun getWalletScriptP3() = Storage.get(Storage.currentContext(), STORAGE_KEY_INIT_WALLET_P3)
 
    //endregion
 
@@ -1502,6 +1468,48 @@ object HubContract : SmartContract() {
    fun BigInteger.toByteArray(padToSize: Int = 0): ByteArray {
       var bytes = this.toByteArray()
       return bytes.pad(padToSize)
+   }
+
+   //endregion
+
+   // -=============-
+   // -=  Logging  =-
+   // -=============-
+   //region logging
+
+   /**
+    * Dispatches a [Runtime.notify] with the specified args at the DEBUG level (3).
+    */
+   private fun log_debug(msg: String, arg: ByteArray) {
+      if (LOG_LEVEL > 2) Runtime.notify(msg, arg)
+   }
+
+   /**
+    * Dispatches a [Runtime.notify] with the specified arg at the DEBUG level (3).
+    */
+   private fun log_debug(msg: String) {
+      if (LOG_LEVEL > 2) Runtime.notify(msg)
+   }
+
+   /**
+    * Dispatches a [Runtime.notify] with the specified args at INFO level (2).
+    */
+   private fun log_info(msg: String, arg: ByteArray) {
+      if (LOG_LEVEL > 1) Runtime.notify(msg, arg)
+   }
+
+   /**
+    * Dispatches a [Runtime.notify] with the specified arg at INFO level (2).
+    */
+   private fun log_info(msg: String) {
+      if (LOG_LEVEL > 1) Runtime.notify(msg)
+   }
+
+   /**
+    * Dispatches a [Runtime.notify] with the specified arg at the ERROR level (1).
+    */
+   private fun log_err(msg: String) {
+      if (LOG_LEVEL > 0) Runtime.notify(msg)
    }
 
    //endregion

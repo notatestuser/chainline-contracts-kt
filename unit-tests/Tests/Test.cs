@@ -5,9 +5,9 @@ using CLTests.Utilities;
 
 namespace CLTests {
    public abstract class Test {
-      public ITestOutputHelper Output { private set; get; }
-      public ExecutionHelper ExecutionHelper { private set; get; }
-      public InteropService InteropService { private set; get; }
+      protected ITestOutputHelper Output { private set; get; }
+      protected ExecutionHelper ExecutionHelper { private set; get; }
+      protected InteropService InteropService { private set; get; }
 
       public Test(ITestOutputHelper output) {
          this.Output = output;

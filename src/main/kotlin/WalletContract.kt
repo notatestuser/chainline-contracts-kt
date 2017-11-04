@@ -57,7 +57,7 @@ object WalletContract : SmartContract() {
       val outputs = tx!!.outputs()
       var gasTxValue: Long = 0  // as a fixed8 int
       var recipientIdx = 0
-      outputs.forEachIndexed{ idx, it ->
+      outputs.forEachIndexed { idx, it ->
          // invokes will not count as their GAS is sent back to the caller
          if (it.scriptHash() !== executingScriptHash &&
                it.assetId() === gasAssetId) {

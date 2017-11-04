@@ -78,10 +78,8 @@ object HubContract : SmartContract() {
       // The entry points for each of the supported operations follow
 
       // Initialization
-      if (operation === "initialize") {
-         initialize(args[0], args[1], args[2])
-         return true
-      }
+      if (operation === "initialize")
+         return initialize(args[0], args[1], args[2])
       if (operation === "is_initialized")
          return isInitialized()
 
@@ -157,18 +155,18 @@ object HubContract : SmartContract() {
          return args[0].wallet_getReputationScore()
       if (operation === "wallet_getGasBalance")
          return args[0].wallet_getGasBalance()
-       if (operation === "wallet_getReservedGasBalance") {
-          val reservations = Storage.get(Storage.currentContext(), args[0])
-          if (reservations.isEmpty()) return 0
-          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-          return reservations.res_getTotalOnHoldGasValue(nowTime)
-       }
+      if (operation === "wallet_getReservedGasBalance") {
+         val reservations = Storage.get(Storage.currentContext(), args[0])
+         if (reservations.isEmpty()) return 0
+         val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+         return reservations.res_getTotalOnHoldGasValue(nowTime)
+      }
       if (operation === "wallet_getFundReservations")
          return args[0].wallet_getFundReservations()
       if (operation === "wallet_requestTxOut") {
          if (args[0].wallet_validate(args[1])) {
             val reservations = args[0].wallet_getFundReservations()
-            return args[0].wallet_requestTxOut(BigInteger(args[3]), reservations)
+            return args[0].wallet_requestTxOut(reservations)
          }
          Runtime.notify("CL:ERR:InvalidWallet")
          return false
@@ -295,7 +293,7 @@ object HubContract : SmartContract() {
     *
     * @param pubKey the script hash of the user wallet to validate
     */
-   private fun ScriptHash.wallet_validate(pubKey: ByteArray): Boolean {
+   private fun ScriptHash.wallet_validate(pubKey: PublicKey): Boolean {
       val expectedScript =
             getWalletScriptP1()
                .concat(pubKey)
@@ -317,25 +315,37 @@ object HubContract : SmartContract() {
    private fun ScriptHash.wallet_getGasBalance(): Long {
       val account = Blockchain.getAccount(this)
       log_info("CL:OK:FoundWallet", account.scriptHash())  // compiler woes
-      return account.getBalance(getAssetId())
+      return account.getBalance(getGasAssetId())
    }
 
    /**
     * Requests permission to perform a withdrawal from a previously validated user wallet.
     * Note: Please ensure that the wallet has been validated before this is called.
     *
-    * @param value the outgoing value of the transaction as a fixed8 int
     * @param reservations the list of [reserved funds objects][Reservation] for the wallet
     * @return true if the transaction was cleared
     */
-   private fun ScriptHash.wallet_requestTxOut(value: BigInteger, reservations: ReservationList): Boolean {
+   private fun ScriptHash.wallet_requestTxOut(reservations: ReservationList): Boolean {
       log_debug("CL:DBG:requestTxOut")
+      // need to count the outputs again for security - a user could invoke directly with a fake value.
+      // we have already validated the calling script at this point, we don't need to get the script hash from ExecutionEngine
+      // the fact that the script has been validated means that the caller is accurate.
+      val tx = ExecutionEngine.scriptContainer() as Transaction?
+      val outputs = tx!!.outputs()
+      var gasTxValue: Long = 0  // as a fixed8 int
+      outputs.forEach {
+         // invokes will not count as their GAS is sent back to the caller
+         if (it.scriptHash() !== this &&
+               it.assetId() === getGasAssetId())
+            gasTxValue += it.value()
+      }
+
       // check if balance is enough after reserved funds are considered
       val balance = this.wallet_getGasBalance()
       val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
       val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
       val effectiveBalance = balance - gasOnHold
-      if (effectiveBalance < value.toLong()) {
+      if (effectiveBalance < gasTxValue) {
          Runtime.notify("CL:ERR:InsufficientBalance")
          return false  // insufficient non-reserved funds
       }
@@ -1385,7 +1395,7 @@ object HubContract : SmartContract() {
    /**
     * The GAS asset ID as a byte array.
     */
-   private fun getAssetId(): ByteArray {
+   private fun getGasAssetId(): ByteArray {
       //return Storage.get(Storage.currentContext(), "AssetID")
       // now reversed. see: https://git.io/vdM02
       val gasAssetId = byteArrayOf(231 as Byte, 45, 40, 105, 121, 238 as Byte, 108, 177 as Byte, 3, 230 as Byte, 93,

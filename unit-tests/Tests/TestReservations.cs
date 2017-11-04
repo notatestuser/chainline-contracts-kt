@@ -92,7 +92,7 @@ namespace CLTests {
             sb.EmitPush(reservations);  // args[0]
             sb.EmitPush(1);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_reservation_getTotalOnHoldValue");  // operation
+            sb.EmitPush("test_reservations_getReservedGasBalance");  // operation
             ExecuteScript(engine, sb);
          }
 
@@ -119,7 +119,7 @@ namespace CLTests {
             sb.EmitPush(reservations);  // args[0]
             sb.EmitPush(1);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_reservation_getTotalOnHoldValue");  // operation
+            sb.EmitPush("test_reservations_getReservedGasBalance");  // operation
             ExecuteScript(engine, sb);
          }
 
@@ -156,7 +156,7 @@ namespace CLTests {
             sb.EmitPush(reservations);  // args[0]
             sb.EmitPush(3);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_reservation_findBy");  // operation
+            sb.EmitPush("test_reservations_findBy");  // operation
             ExecuteScript(engine, sb);
          }
 
@@ -193,7 +193,7 @@ namespace CLTests {
             sb.EmitPush(reservations);  // args[0]
             sb.EmitPush(3);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_reservation_findBy");  // operation
+            sb.EmitPush("test_reservations_findBy");  // operation
             ExecuteScript(engine, sb);
          }
 
@@ -226,7 +226,7 @@ namespace CLTests {
             sb.EmitPush(reservations);  // args[0]
             sb.EmitPush(3);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_reservation_replaceRecipientAt");  // operation
+            sb.EmitPush("test_reservations_replaceRecipientAt");  // operation
             ExecuteScript(engine, sb);
          }
 

@@ -1,0 +1,35 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>HubContract.demand_create - chainline-contracts</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">chainline-contracts</a>&nbsp;/&nbsp;<a href="../index.html">chainline.contracts</a>&nbsp;/&nbsp;<a href="index.html">HubContract</a>&nbsp;/&nbsp;<a href=".">demand_create</a><br/>
+<br/>
+<h1>demand_create</h1>
+<a name="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)"></a>
+<code><span class="keyword">private</span> <span class="keyword">fun </span><span class="identifier">demand_create</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/expiry">expiry</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/repRequired">repRequired</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/itemSize">itemSize</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/itemValue">itemValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/infoBlob">infoBlob</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-demand.html"><span class="identifier">Demand</span></a></code> <a href="http://github.com/notatestuser/chainline-contracts-kt/HubContract.kt#L774">(source)</a>
+<p>Creates a new <a href="../-demand.html">Demand</a>.</p>
+<p>Demand details:</p>
+<ul><li>pickup and destination cities (hashed) (kept in storage key)</li>
+<li>product/contact info</li>
+<li>expiry (timestamp)</li>
+<li>minimum reputation requirement</li>
+<li>carry space required (xs, sm, md, lg, xl) (1, 2, 3, 4, 5)</li>
+</ul>
+<h3>Parameters</h3>
+<p><a name="owner"></a>
+<code>owner</code> - the owner of the demand</p>
+<p><a name="expiry"></a>
+<code>expiry</code> - the time that the demand expires as a unix timestamp</p>
+<p><a name="repRequired"></a>
+<code>repRequired</code> - the reputation required of a traveller in order for this demand to be matched</p>
+<p><a name="itemSize"></a>
+<code>itemSize</code> - the size of the item (on a scale of 1-5)</p>
+<p><a name="itemValue"></a>
+<code>itemValue</code> - the value of the item in GAS as a fixed8 int</p>
+<p><a name="infoBlob"></a>
+<code>infoBlob</code> - a 128 character string describing the desired item and the demand owner's contact details</p>
+</BODY>
+</HTML>

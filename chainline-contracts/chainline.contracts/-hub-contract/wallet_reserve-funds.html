@@ -1,0 +1,42 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>HubContract.wallet_reserveFunds - chainline-contracts</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">chainline-contracts</a>&nbsp;/&nbsp;<a href="../index.html">chainline.contracts</a>&nbsp;/&nbsp;<a href="index.html">HubContract</a>&nbsp;/&nbsp;<a href=".">wallet_reserveFunds</a><br/>
+<br/>
+<h1>wallet_reserveFunds</h1>
+<a name="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray, kotlin.Boolean)"></a>
+<code><span class="keyword">private</span> <span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_reserveFunds</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray, kotlin.Boolean)/expiry">expiry</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray, kotlin.Boolean)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray, kotlin.Boolean)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray, kotlin.Boolean)/overwrite">overwrite</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code> <a href="http://github.com/notatestuser/chainline-contracts-kt/HubContract.kt#L383">(source)</a>
+<p>Reserves funds in a previously validated user wallet.</p>
+<p>Note: Please ensure that the wallet has been validated before this is called.</p>
+<h3>Parameters</h3>
+<p><a name="expiry"></a>
+<code>expiry</code> - timestamp of when the reserved funds get released automatically</p>
+<p><a name="value"></a>
+<code>value</code> - the amount of GAS to hold in the reservation as a fixed8 int</p>
+<p><a name="recipient"></a>
+<code>recipient</code> - the recipient wallet that the funds are reserved for</p>
+<p><a name="overwrite"></a>
+<code>overwrite</code> - true if existing reserved funds should be overwritten for this wallet</p>
+<p><strong>Return</strong><br/>
+true on success</p>
+<a name="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Boolean)"></a>
+<code><span class="keyword">private</span> <span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_reserveFunds</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Boolean)/expiry">expiry</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Boolean)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Boolean)/overwrite">overwrite</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code> <a href="http://github.com/notatestuser/chainline-contracts-kt/HubContract.kt#L426">(source)</a>
+<p>Functionally equivalent to wallet_reserveFunds except that this should be used when the recipient is unknown.</p>
+<h3>Parameters</h3>
+<p><a name="expiry"></a>
+<code>expiry</code> - timestamp of when the reserved funds get released automatically</p>
+<p><a name="value"></a>
+<code>value</code> - the amount of GAS to withhold in the reservation as a fixed8 int</p>
+<p><a name="overwrite"></a>
+<code>overwrite</code> - true if existing reserved funds should be overwritten for this wallet</p>
+<p><strong>See Also</strong><br/>
+<p>wallet_reserveFunds</p>
+</p>
+<p><strong>Return</strong><br/>
+true on success</p>
+</BODY>
+</HTML>

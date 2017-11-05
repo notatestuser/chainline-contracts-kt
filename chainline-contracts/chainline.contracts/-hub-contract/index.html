@@ -1,0 +1,918 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>HubContract - chainline-contracts</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">chainline-contracts</a>&nbsp;/&nbsp;<a href="../index.html">chainline.contracts</a>&nbsp;/&nbsp;<a href=".">HubContract</a><br/>
+<br/>
+<h1>HubContract</h1>
+<code><span class="keyword">object </span><span class="identifier">HubContract</span>&nbsp;<span class="symbol">:</span>&nbsp;<span class="identifier">SmartContract</span></code> <a href="http://github.com/notatestuser/chainline-contracts-kt/HubContract.kt#L29">(source)</a>
+<h3>Properties</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<p><a href="-c-a-r-r-y_-s-p-a-c-e_-s-i-z-e.html">CARRY_SPACE_SIZE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">CARRY_SPACE_SIZE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-d-e-m-a-n-d_-i-n-f-o_-s-i-z-e.html">DEMAND_INFO_SIZE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">DEMAND_INFO_SIZE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-d-e-m-a-n-d_-s-i-z-e.html">DEMAND_SIZE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">DEMAND_SIZE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-f-e-e_-d-e-m-a-n-d_-r-e-w-a-r-d.html">FEE_DEMAND_REWARD</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">FEE_DEMAND_REWARD</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-f-e-e_-t-r-a-v-e-l_-d-e-p-o-s-i-t.html">FEE_TRAVEL_DEPOSIT</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">FEE_TRAVEL_DEPOSIT</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-l-o-g_-l-e-v-e-l.html">LOG_LEVEL</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">LOG_LEVEL</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-m-a-x_-g-a-s_-t-x_-v-a-l-u-e.html">MAX_GAS_TX_VALUE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">MAX_GAS_TX_VALUE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-r-e-p_-r-e-q-u-i-r-e-d_-s-i-z-e.html">REP_REQUIRED_SIZE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">REP_REQUIRED_SIZE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-r-e-s-e-r-v-a-t-i-o-n_-s-i-z-e.html">RESERVATION_SIZE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">RESERVATION_SIZE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-s-c-r-i-p-t_-h-a-s-h_-s-i-z-e.html">SCRIPT_HASH_SIZE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">SCRIPT_HASH_SIZE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-s-t-o-r-a-g-e_-k-e-y_-i-n-i-t-i-a-l-i-z-e-d.html">STORAGE_KEY_INITIALIZED</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">STORAGE_KEY_INITIALIZED</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-s-t-o-r-a-g-e_-k-e-y_-i-n-i-t_-w-a-l-l-e-t_-p1.html">STORAGE_KEY_INIT_WALLET_P1</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">STORAGE_KEY_INIT_WALLET_P1</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-s-t-o-r-a-g-e_-k-e-y_-i-n-i-t_-w-a-l-l-e-t_-p2.html">STORAGE_KEY_INIT_WALLET_P2</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">STORAGE_KEY_INIT_WALLET_P2</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-s-t-o-r-a-g-e_-k-e-y_-i-n-i-t_-w-a-l-l-e-t_-p3.html">STORAGE_KEY_INIT_WALLET_P3</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">STORAGE_KEY_INIT_WALLET_P3</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-s-t-o-r-a-g-e_-k-e-y_-s-t-a-t-s_-c-i-t-i-e-s.html">STORAGE_KEY_STATS_CITIES</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">STORAGE_KEY_STATS_CITIES</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-s-t-o-r-a-g-e_-k-e-y_-s-t-a-t-s_-d-e-m-a-n-d-s.html">STORAGE_KEY_STATS_DEMANDS</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">STORAGE_KEY_STATS_DEMANDS</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-s-t-o-r-a-g-e_-k-e-y_-s-t-a-t-s_-f-u-n-d-s.html">STORAGE_KEY_STATS_FUNDS</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">STORAGE_KEY_STATS_FUNDS</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-s-t-o-r-a-g-e_-k-e-y_-s-u-f-f-i-x_-d-e-m-a-n-d.html">STORAGE_KEY_SUFFIX_DEMAND</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">STORAGE_KEY_SUFFIX_DEMAND</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte/index.html"><span class="identifier">Byte</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-s-t-o-r-a-g-e_-k-e-y_-s-u-f-f-i-x_-t-r-a-v-e-l.html">STORAGE_KEY_SUFFIX_TRAVEL</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">STORAGE_KEY_SUFFIX_TRAVEL</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte/index.html"><span class="identifier">Byte</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-t-e-s-t-s_-e-n-a-b-l-e-d.html">TESTS_ENABLED</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">TESTS_ENABLED</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-t-i-m-e-s-t-a-m-p_-s-i-z-e.html">TIMESTAMP_SIZE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">TIMESTAMP_SIZE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-t-r-a-v-e-l_-e-x-t-r-a_-e-x-p-i-r-y_-o-n_-m-a-t-c-h.html">TRAVEL_EXTRA_EXPIRY_ON_MATCH</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">TRAVEL_EXTRA_EXPIRY_ON_MATCH</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-t-r-a-v-e-l_-s-i-z-e.html">TRAVEL_SIZE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">TRAVEL_SIZE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-t-x_-h-a-s-h_-s-i-z-e.html">TX_HASH_SIZE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">TX_HASH_SIZE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+<tr>
+<td>
+<p><a href="-v-a-l-u-e_-s-i-z-e.html">VALUE_SIZE</a></p>
+</td>
+<td>
+<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">VALUE_SIZE</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code></td>
+</tr>
+</tbody>
+</table>
+<h3>Functions</h3>
+<table>
+<tbody>
+<tr>
+<td>
+<p><a href="-main.html">Main</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">Main</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$Main(kotlin.String, kotlin.Array((kotlin.ByteArray)))/operation">operation</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a><span class="symbol">, </span><span class="keyword">vararg</span> <span class="identifier" id="chainline.contracts.HubContract$Main(kotlin.String, kotlin.Array((kotlin.ByteArray)))/args">args</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html"><span class="identifier">Any</span></a></code>
+<p>The entry point of the smart contract.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="concat.html">concat</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">.</span><span class="identifier">concat</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$concat(kotlin.ByteArray, kotlin.ByteArray)/b2">b2</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Concatenates two <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html">ByteArray</a> together.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_create.html">demand_create</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">demand_create</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/expiry">expiry</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/repRequired">repRequired</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/itemSize">itemSize</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/itemValue">itemValue</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/infoBlob">infoBlob</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-demand.html"><span class="identifier">Demand</span></a></code>
+<p>Creates a new <a href="../-demand.html">Demand</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_get-expiry.html">demand_getExpiry</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_getExpiry</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the expiry timestamp of a <a href="../-demand.html">Demand</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_get-info-blob.html">demand_getInfoBlob</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_getInfoBlob</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Gets the info string for a <a href="../-demand.html">Demand</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_get-item-size.html">demand_getItemSize</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_getItemSize</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the size of the desired item.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_get-item-value.html">demand_getItemValue</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_getItemValue</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the desired item's value.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_get-match-key.html">demand_getMatchKey</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_getMatchKey</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Gets the storage key to store a <a href="../-travel.html">Travel</a> match for this <a href="../-demand.html">Demand</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_get-matched-at-time.html">demand_getMatchedAtTime</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_getMatchedAtTime</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the time at which this <a href="../-demand.html">Demand</a> was matched with a <a href="../-travel.html">Travel</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_get-owner-script-hash.html">demand_getOwnerScriptHash</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_getOwnerScriptHash</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a></code>
+<p>Gets the owner of the <a href="../-demand.html">Demand</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_get-rep-required.html">demand_getRepRequired</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_getRepRequired</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the reputation score required of a <a href="../-travel.html">Travel</a> in order to match this <a href="../-demand.html">Demand</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_get-storage-key.html">demand_getStorageKey</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-hash160-pair.html"><span class="identifier">Hash160Pair</span></a><span class="symbol">.</span><span class="identifier">demand_getStorageKey</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Gets the storage key for a <a href="../-demand.html">Demand</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_get-total-value.html">demand_getTotalValue</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_getTotalValue</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the <a href="../-demand.html">Demand</a>'s total value (item value + reward fee).</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_is-matched.html">demand_isMatched</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_isMatched</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Determines whether the given <a href="../-demand.html">Demand</a> has been matched with a <a href="../-travel.html">Travel</a> object.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_reserve-value-and-fee.html">demand_reserveValueAndFee</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_reserveValueAndFee</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$demand_reserveValueAndFee(kotlin.ByteArray, kotlin.ByteArray)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Reserves the item's value and reward fee for a new demand.</p>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_reserveValueAndFee</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$demand_reserveValueAndFee(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_reserveValueAndFee(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/matchedTravel">matchedTravel</span><span class="symbol">:</span>&nbsp;<a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Reserves the item's value and reward fee for a new demand.
+This form of the method is used when a <a href="../-travel.html">Travel</a> was found to be matched with the <a href="../-demand.html">Demand</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demand_store-and-match.html">demand_storeAndMatch</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand.html"><span class="identifier">Demand</span></a><span class="symbol">.</span><span class="identifier">demand_storeAndMatch</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$demand_storeAndMatch(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_storeAndMatch(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/pickUpCityHash">pickUpCityHash</span><span class="symbol">:</span>&nbsp;<a href="../-hash160.html"><span class="identifier">Hash160</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demand_storeAndMatch(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/dropOffCityHash">dropOffCityHash</span><span class="symbol">:</span>&nbsp;<a href="../-hash160.html"><span class="identifier">Hash160</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Performs all the legwork necessary to store and match a <a href="../-demand.html">Demand</a> with a <a href="../-travel.html">Travel</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demands_find-matchable-demand.html">demands_findMatchableDemand</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand-list.html"><span class="identifier">DemandList</span></a><span class="symbol">.</span><span class="identifier">demands_findMatchableDemand</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$demands_findMatchableDemand(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Int, kotlin.Boolean)/repRequired">repRequired</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demands_findMatchableDemand(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Int, kotlin.Boolean)/carrySpaceAvailable">carrySpaceAvailable</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demands_findMatchableDemand(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Int, kotlin.Boolean)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Blockchain.getHeader(Blockchain.height()).timestamp()<span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$demands_findMatchableDemand(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Int, kotlin.Boolean)/assumeUnmatched">assumeUnmatched</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><a href="../-demand.html"><span class="identifier">Demand</span></a></code>
+<p>Finds a <a href="../-demand.html">Demand</a> in a <a href="../-demand-list.html">DemandList</a> that fits the given attributes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="demands_get-at.html">demands_getAt</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-demand-list.html"><span class="identifier">DemandList</span></a><span class="symbol">.</span><span class="identifier">demands_getAt</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$demands_getAt(kotlin.ByteArray, kotlin.Int)/index">index</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-travel.html"><span class="identifier">Travel</span></a></code>
+<p>Gets the <a href="../-demand.html">Demand</a> at the given <a href="demands_get-at.html#chainline.contracts.HubContract$demands_getAt(kotlin.ByteArray, kotlin.Int)/index">index</a> in a <a href="../-demand-list.html">DemandList</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="get-gas-asset-id.html">getGasAssetId</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getGasAssetId</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>The GAS asset ID as a byte array.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="get-wallet-script-p1.html">getWalletScriptP1</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getWalletScriptP1</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Gets part 1 of the wallet script code (code before the public key), set at init time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="get-wallet-script-p2.html">getWalletScriptP2</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getWalletScriptP2</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Gets part 2 of the wallet script code (code after the public key, before the script hash), set at init time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="get-wallet-script-p3.html">getWalletScriptP3</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">getWalletScriptP3</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Gets part 3 of the wallet script code (code after the script hash), set at init time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="initialize.html">initialize</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">initialize</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$initialize(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/walletScriptP1">walletScriptP1</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$initialize(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/walletScriptP2">walletScriptP2</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$initialize(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/walletScriptP3">walletScriptP3</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Initializes the smart contract. This takes the three parts of the wallet script as arguments.
+These parts are stored and then used to verify the integrity of user wallets in the system.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="is-initialized.html">isInitialized</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">isInitialized</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Checks whether the contract has been initialized.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="log_debug.html">log_debug</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">log_debug</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$log_debug(kotlin.String, kotlin.ByteArray)/msg">msg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$log_debug(kotlin.String, kotlin.ByteArray)/arg">arg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Dispatches a <a href="#">Runtime.notify</a> with the specified args at the DEBUG level (3).</p>
+<code><span class="keyword">fun </span><span class="identifier">log_debug</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$log_debug(kotlin.String)/msg">msg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Dispatches a <a href="#">Runtime.notify</a> with the specified arg at the DEBUG level (3).</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="log_err.html">log_err</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">log_err</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$log_err(kotlin.String)/msg">msg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Dispatches a <a href="#">Runtime.notify</a> with the specified arg at the ERROR level (1).</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="log_info.html">log_info</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">log_info</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$log_info(kotlin.String, kotlin.ByteArray)/msg">msg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$log_info(kotlin.String, kotlin.ByteArray)/arg">arg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Dispatches a <a href="#">Runtime.notify</a> with the specified args at INFO level (2).</p>
+<code><span class="keyword">fun </span><span class="identifier">log_info</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$log_info(kotlin.String)/msg">msg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Dispatches a <a href="#">Runtime.notify</a> with the specified arg at INFO level (2).</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="pad.html">pad</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">.</span><span class="identifier">pad</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$pad(kotlin.ByteArray, kotlin.Int)/count">count</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Pads a <a href="#">BigInteger</a> that has been converted to a <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html">ByteArray</a> to a specified byte length.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="range.html">range</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">.</span><span class="identifier">range</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$range(kotlin.ByteArray, kotlin.Int, kotlin.Int)/index">index</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$range(kotlin.ByteArray, kotlin.Int, kotlin.Int)/count">count</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Extracts a range of bytes from a <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html">ByteArray</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="res_find-by.html">res_findBy</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-reservation-list.html"><span class="identifier">ReservationList</span></a><span class="symbol">.</span><span class="identifier">res_findBy</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$res_findBy(kotlin.ByteArray, java.math.BigInteger)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code>
+<p>Finds the <a href="../-reservation.html">reserved funds object</a> with the given <a href="res_find-by.html#chainline.contracts.HubContract$res_findBy(kotlin.ByteArray, java.math.BigInteger)/value">value</a> in a <a href="../-reservation-list.html">ReservationList</a>.</p>
+<code><span class="keyword">fun </span><a href="../-reservation-list.html"><span class="identifier">ReservationList</span></a><span class="symbol">.</span><span class="identifier">res_findBy</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$res_findBy(kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$res_findBy(kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a></code>
+<p>Finds the <a href="../-reservation.html">reserved funds object</a> with the given <a href="res_find-by.html#chainline.contracts.HubContract$res_findBy(kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)/value">value</a> and <a href="res_find-by.html#chainline.contracts.HubContract$res_findBy(kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)/recipient">recipient</a> in a <a href="../-reservation-list.html">ReservationList</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="res_get-at.html">res_getAt</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-reservation-list.html"><span class="identifier">ReservationList</span></a><span class="symbol">.</span><span class="identifier">res_getAt</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$res_getAt(kotlin.ByteArray, kotlin.Int)/index">index</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-reservation.html"><span class="identifier">Reservation</span></a></code>
+<p>Gets the <a href="../-reservation.html">reserved funds object</a> at the given <a href="res_get-at.html#chainline.contracts.HubContract$res_getAt(kotlin.ByteArray, kotlin.Int)/index">index</a> in a <a href="../-reservation-list.html">ReservationList</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="res_get-expiry.html">res_getExpiry</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-reservation.html"><span class="identifier">Reservation</span></a><span class="symbol">.</span><span class="identifier">res_getExpiry</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the expiry timestamp for an individual <a href="../-reservation.html">Reservation</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="res_get-recipient.html">res_getRecipient</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-reservation.html"><span class="identifier">Reservation</span></a><span class="symbol">.</span><span class="identifier">res_getRecipient</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a></code>
+<p>Gets the intended recipient of reserved funds.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="res_get-total-on-hold-gas-value.html">res_getTotalOnHoldGasValue</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-reservation-list.html"><span class="identifier">ReservationList</span></a><span class="symbol">.</span><span class="identifier">res_getTotalOnHoldGasValue</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$res_getTotalOnHoldGasValue(kotlin.ByteArray, kotlin.Int, kotlin.Boolean)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$res_getTotalOnHoldGasValue(kotlin.ByteArray, kotlin.Int, kotlin.Boolean)/assumeUnpaid">assumeUnpaid</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a></code>
+<p>Calculates the total value of GAS that a <a href="../-reservation-list.html">list of reserved funds</a> is holding, considering expiry
+times and whether funds were already paid out to the intended recipient.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="res_get-value.html">res_getValue</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-reservation.html"><span class="identifier">Reservation</span></a><span class="symbol">.</span><span class="identifier">res_getValue</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the GAS value of an individual <a href="../-reservation.html">Reservation</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="res_replace-recipient-at.html">res_replaceRecipientAt</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-reservation-list.html"><span class="identifier">ReservationList</span></a><span class="symbol">.</span><span class="identifier">res_replaceRecipientAt</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$res_replaceRecipientAt(kotlin.ByteArray, kotlin.Int, kotlin.ByteArray)/idx">idx</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$res_replaceRecipientAt(kotlin.ByteArray, kotlin.Int, kotlin.ByteArray)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-reservation-list.html"><span class="identifier">ReservationList</span></a></code>
+<p>Finds the <a href="../-reservation.html">reserved funds object</a> at the given <a href="res_replace-recipient-at.html#chainline.contracts.HubContract$res_replaceRecipientAt(kotlin.ByteArray, kotlin.Int, kotlin.ByteArray)/idx">idx</a> and replaces its <a href="res_replace-recipient-at.html#chainline.contracts.HubContract$res_replaceRecipientAt(kotlin.ByteArray, kotlin.Int, kotlin.ByteArray)/recipient">recipient</a> with the one given.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="res_was-paid-to-recipient.html">res_wasPaidToRecipient</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-reservation.html"><span class="identifier">Reservation</span></a><span class="symbol">.</span><span class="identifier">res_wasPaidToRecipient</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Determines whether the reserved funds were paid out to the recipient.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="reservation_create.html">reservation_create</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">reservation_create</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$reservation_create(java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/expiry">expiry</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$reservation_create(java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$reservation_create(java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-reservation.html"><span class="identifier">Reservation</span></a></code>
+<p>Creates a <a href="../-reservation.html">reserved funds object</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="stats_get-city-usage-count.html">stats_getCityUsageCount</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stats_getCityUsageCount</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Returns the number of unique cities used over time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="stats_get-demands-count.html">stats_getDemandsCount</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stats_getDemandsCount</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Returns the number of demands created over time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="stats_get-reserved-funds-count.html">stats_getReservedFundsCount</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stats_getReservedFundsCount</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Returns the amount of funds reserved over time as a fixed8 int.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="stats_record-city-usage.html">stats_recordCityUsage</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stats_recordCityUsage</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$stats_recordCityUsage(kotlin.ByteArray)/city">city</span><span class="symbol">:</span>&nbsp;<a href="../-hash160.html"><span class="identifier">Hash160</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Increments the counter that keeps the number of unique cities used over time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="stats_record-demand-creation.html">stats_recordDemandCreation</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stats_recordDemandCreation</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Increments the counter that keeps the number of <a href="#">Demands</a> created over time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="stats_record-reserved-funds.html">stats_recordReservedFunds</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">stats_recordReservedFunds</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$stats_recordReservedFunds(java.math.BigInteger)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Increments the counter that keeps a count of all funds reserved over time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="take.html">take</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">.</span><span class="identifier">take</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$take(kotlin.ByteArray, kotlin.Int)/count">count</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Takes a number of bytes from the start of a <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html">ByteArray</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="throw-if-not.html">throwIfNot</a></p>
+</td>
+<td>
+<code><span class="keyword">external</span> <span class="keyword">fun </span><span class="identifier">throwIfNot</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$throwIfNot(kotlin.Any)/arg">arg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html"><span class="identifier">Any</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Inserts the "THROWIFNOT" VM OpCode.
+Aborts execution if the supplied <a href="throw-if-not.html#chainline.contracts.HubContract$throwIfNot(kotlin.Any)/arg">arg</a> is not true.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="to-byte-array.html">toByteArray</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">BigInteger</span><span class="symbol">.</span><span class="identifier">toByteArray</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$toByteArray(java.math.BigInteger, kotlin.Int)/padToSize">padToSize</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a>&nbsp;<span class="symbol">=</span>&nbsp;0<span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Converts a <a href="#">BigInteger</a> to a padded <a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html">ByteArray</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_create.html">travel_create</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">travel_create</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$travel_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$travel_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger)/expiry">expiry</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$travel_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger)/repRequired">repRequired</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$travel_create(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, java.math.BigInteger)/carrySpace">carrySpace</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-travel.html"><span class="identifier">Travel</span></a></code>
+<p>Creates a new <a href="../-travel.html">Travel</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_find-matchable-travel.html">travel_findMatchableTravel</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel-list.html"><span class="identifier">TravelList</span></a><span class="symbol">.</span><span class="identifier">travel_findMatchableTravel</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$travel_findMatchableTravel(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Int, kotlin.Boolean)/repRequired">repRequired</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$travel_findMatchableTravel(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Int, kotlin.Boolean)/carrySpaceRequired">carrySpaceRequired</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$travel_findMatchableTravel(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Int, kotlin.Boolean)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Blockchain.getHeader(Blockchain.height()).timestamp()<span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$travel_findMatchableTravel(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Int, kotlin.Boolean)/assumeUnmatched">assumeUnmatched</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a>&nbsp;<span class="symbol">=</span>&nbsp;false<span class="symbol">)</span><span class="symbol">: </span><a href="../-travel.html"><span class="identifier">Travel</span></a></code>
+<p>Finds a <a href="../-travel.html">Travel</a> in a <a href="../-travel-list.html">TravelList</a> that fits the given attributes.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_get-carry-space.html">travel_getCarrySpace</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">.</span><span class="identifier">travel_getCarrySpace</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the item carry space available.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_get-expiry.html">travel_getExpiry</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">.</span><span class="identifier">travel_getExpiry</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the expiry timestamp of a <a href="../-travel.html">Travel</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_get-match-key.html">travel_getMatchKey</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">.</span><span class="identifier">travel_getMatchKey</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Gets the storage key to store a <a href="../-demand.html">Demand</a> match for this <a href="../-travel.html">Travel</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_get-matched-at-time.html">travel_getMatchedAtTime</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">.</span><span class="identifier">travel_getMatchedAtTime</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the time at which this <a href="../-travel.html">Travel</a> was matched with a <a href="../-demand.html">Demand</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_get-owner-script-hash.html">travel_getOwnerScriptHash</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">.</span><span class="identifier">travel_getOwnerScriptHash</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a></code>
+<p>Gets the owner of the <a href="../-travel.html">Travel</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_get-rep-required.html">travel_getRepRequired</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">.</span><span class="identifier">travel_getRepRequired</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the reputation score required of a <a href="../-demand.html">Demand</a> in order to match this <a href="../-travel.html">Travel</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_get-storage-key.html">travel_getStorageKey</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-hash160-pair.html"><span class="identifier">Hash160Pair</span></a><span class="symbol">.</span><span class="identifier">travel_getStorageKey</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Gets the storage key for a <a href="../-travel.html">Travel</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_is-matched.html">travel_isMatched</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">.</span><span class="identifier">travel_isMatched</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Determines whether the given <a href="../-travel.html">Travel</a> has been matched with a <a href="../-demand.html">Demand</a> object.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_overwrite-expiry.html">travel_overwriteExpiry</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">.</span><span class="identifier">travel_overwriteExpiry</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$travel_overwriteExpiry(kotlin.ByteArray, kotlin.ByteArray, java.math.BigInteger)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$travel_overwriteExpiry(kotlin.ByteArray, kotlin.ByteArray, java.math.BigInteger)/expiry">expiry</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Re-reserves the deposit due by a traveller when they create a <a href="../-travel.html">Travel</a> with a revised expiry time.
+This method also updates a wallet's "state lock" with the new expiry time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_reserve-deposit.html">travel_reserveDeposit</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">.</span><span class="identifier">travel_reserveDeposit</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$travel_reserveDeposit(kotlin.ByteArray, kotlin.ByteArray)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Reserves the deposit due by a traveller when they create a <a href="../-travel.html">Travel</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travel_store-and-match.html">travel_storeAndMatch</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel.html"><span class="identifier">Travel</span></a><span class="symbol">.</span><span class="identifier">travel_storeAndMatch</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$travel_storeAndMatch(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/owner">owner</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$travel_storeAndMatch(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/pickUpCityHash">pickUpCityHash</span><span class="symbol">:</span>&nbsp;<a href="../-hash160.html"><span class="identifier">Hash160</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$travel_storeAndMatch(kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray, kotlin.ByteArray)/dropOffCityHash">dropOffCityHash</span><span class="symbol">:</span>&nbsp;<a href="../-hash160.html"><span class="identifier">Hash160</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Performs all the legwork necessary to store and match a <a href="../-travel.html">Travel</a> with a <a href="../-demand.html">Demand</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="travels_get-at.html">travels_getAt</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-travel-list.html"><span class="identifier">TravelList</span></a><span class="symbol">.</span><span class="identifier">travels_getAt</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$travels_getAt(kotlin.ByteArray, kotlin.Int)/index">index</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="../-travel.html"><span class="identifier">Travel</span></a></code>
+<p>Gets the <a href="../-travel.html">Travel</a> at the given <a href="travels_get-at.html#chainline.contracts.HubContract$travels_getAt(kotlin.ByteArray, kotlin.Int)/index">index</a> in a <a href="../-travel-list.html">TravelList</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_can-open-demand-or-travel.html">wallet_canOpenDemandOrTravel</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_canOpenDemandOrTravel</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_canOpenDemandOrTravel(kotlin.ByteArray, kotlin.Int)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a>&nbsp;<span class="symbol">=</span>&nbsp;Blockchain.getHeader(Blockchain.height()).timestamp()<span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Indicates whether a wallet is in a state that allows it to open a demand or travel.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_clear-fund-reservations.html">wallet_clearFundReservations</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_clearFundReservations</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Deletes a wallet's <a href="../-reservation.html">reserved funds</a> from storage.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_clear-state.html">wallet_clearState</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_clearState</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Clears all wallet system state, allowing for new Chain Line transactions.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_get-fund-reservations.html">wallet_getFundReservations</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_getFundReservations</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-reservation-list.html"><span class="identifier">ReservationList</span></a></code>
+<p>Gets the list of <a href="../-reservation-list.html">reserved funds</a> for the given wallet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_get-fund-reservations-storage-key.html">wallet_getFundReservationsStorageKey</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_getFundReservationsStorageKey</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Gets the storage key used to store/lookup <a href="../-reservation-list.html">reserved funds</a> for a wallet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_get-gas-balance.html">wallet_getGasBalance</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_getGasBalance</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a></code>
+<p>Gets the GAS balance of a user wallet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_get-reputation-score.html">wallet_getReputationScore</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_getReputationScore</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><span class="identifier">BigInteger</span></code>
+<p>Gets the reputation score for a user wallet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_get-reputation-storage-key.html">wallet_getReputationStorageKey</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_getReputationStorageKey</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
+<p>Gets the storage key used to store/lookup user reputation for a wallet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_get-state-storage-key.html">wallet_getStateStorageKey</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_getStateStorageKey</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a></code>
+<p>Gets the storage key used to store/lookup state information for a wallet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_has-funds.html">wallet_hasFunds</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_hasFunds</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_hasFunds(kotlin.ByteArray, kotlin.Long)/amount">amount</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Check if the wallet has enough funds to perform a transaction after reserved funds are considered.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_increment-reputation-score.html">wallet_incrementReputationScore</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_incrementReputationScore</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Increments the reputation score for the user wallet by 1.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_request-tx-out.html">wallet_requestTxOut</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_requestTxOut</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Requests permission to perform a withdrawal from a validated user wallet using the value in tx outputs.
+Note: Please ensure that the wallet has been validated before this is called.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_reserve-funds.html">wallet_reserveFunds</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_reserveFunds</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray, kotlin.Boolean)/expiry">expiry</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray, kotlin.Boolean)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray, kotlin.Boolean)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.ByteArray, kotlin.Boolean)/overwrite">overwrite</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Reserves funds in a previously validated user wallet.</p>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_reserveFunds</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Boolean)/expiry">expiry</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Boolean)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_reserveFunds(kotlin.ByteArray, java.math.BigInteger, java.math.BigInteger, kotlin.Boolean)/overwrite">overwrite</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Functionally equivalent to <a href="wallet_reserve-funds.html">wallet_reserveFunds</a> except that this should be used when the recipient is unknown.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_set-reservation-paid-to-recipient-tx-hash.html">wallet_setReservationPaidToRecipientTxHash</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_setReservationPaidToRecipientTxHash</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_setReservationPaidToRecipientTxHash(kotlin.ByteArray, kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_setReservationPaidToRecipientTxHash(kotlin.ByteArray, kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_setReservationPaidToRecipientTxHash(kotlin.ByteArray, kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)/txHash">txHash</span><span class="symbol">:</span>&nbsp;<a href="../-hash256.html"><span class="identifier">Hash256</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Sets the transaction hash of funds that have been transferred to the recipient of <a href="../-reservation-list.html">reserved funds</a>.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_store-fund-reservations.html">wallet_storeFundReservations</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_storeFundReservations</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_storeFundReservations(kotlin.ByteArray, kotlin.ByteArray)/resList">resList</span><span class="symbol">:</span>&nbsp;<a href="../-reservation-list.html"><span class="identifier">ReservationList</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Stores <a href="../-reservation-list.html">reserved funds</a> for the given wallet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_store-reputation-score.html">wallet_storeReputationScore</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_storeReputationScore</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_storeReputationScore(kotlin.ByteArray, java.math.BigInteger)/rep">rep</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Stores a reputation score for a user wallet.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_validate.html">wallet_validate</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_validate</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_validate(kotlin.ByteArray, kotlin.ByteArray)/pubKey">pubKey</span><span class="symbol">:</span>&nbsp;<a href="../-public-key.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Validates an individual user wallet.</p>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_validate</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_validate(kotlin.ByteArray, kotlin.ByteArray, kotlin.Long)/pubKey">pubKey</span><span class="symbol">:</span>&nbsp;<a href="../-public-key.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_validate(kotlin.ByteArray, kotlin.ByteArray, kotlin.Long)/outgoingAmount">outgoingAmount</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Validates an individual user wallet and checks its effective balance to ensure a transaction is clear to proceed.</p>
+</td>
+</tr>
+</tbody>
+</table>
+</BODY>
+</HTML>

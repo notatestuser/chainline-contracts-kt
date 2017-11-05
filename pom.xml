@@ -117,28 +117,36 @@
                </execution>
             </executions>
             <configuration>
+               <outputFormat>html</outputFormat>
                <jdkVersion>8</jdkVersion>
                <perPackageOptions>
-                     <packageOptions>
-                        <prefix>chainline</prefix>
-                        <skipDeprecated>false</skipDeprecated>
-                        <reportUndocumented>false</reportUndocumented>
-                        <includeNonPublic>true</includeNonPublic>
-                     </packageOptions>
+                  <packageOptions>
+                     <prefix>chainline</prefix>
+                     <skipDeprecated>false</skipDeprecated>
+                     <reportUndocumented>false</reportUndocumented>
+                     <includeNonPublic>true</includeNonPublic>
+                  </packageOptions>
                </perPackageOptions>
+               <sourceLinks>
+                  <link>
+                     <dir>${project.basedir}/src/main/kotlin</dir>
+                     <url>http://github.com/notatestuser/chainline-contracts-kt</url>
+                     <urlSuffix>#L</urlSuffix>
+                  </link>
+               </sourceLinks>
             </configuration>
          </plugin>
       </plugins>
    </build>
 
-    <pluginRepositories>
-        <pluginRepository>
-            <id>jcenter</id>
-            <name>JCenter</name>
-            <url>https://jcenter.bintray.com/</url>
-            <releases>
-                <enabled>true</enabled>
-            </releases>
-        </pluginRepository>
-    </pluginRepositories>
+   <pluginRepositories>
+      <pluginRepository>
+         <id>jcenter</id>
+         <name>JCenter</name>
+         <url>https://jcenter.bintray.com/</url>
+         <releases>
+            <enabled>true</enabled>
+         </releases>
+      </pluginRepository>
+   </pluginRepositories>
 </project>

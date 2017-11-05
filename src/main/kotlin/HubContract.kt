@@ -110,7 +110,7 @@ object HubContract : SmartContract() {
          if (operation === "test_demand_getInfoBlob")
             return args[0].demand_getInfoBlob()
          if (operation === "test_demand_findMatchableDemand")
-            return args[0].demands_findMatchableDemand(BigInteger(args[1]), BigInteger(args[2]), (args[3] as Int?)!!, true)
+            return args[0].demands_findMatchableDemand(BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), (args[4] as Int?)!!, true)
          if (operation === "test_travel_create")
             return travel_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]))
          if (operation === "test_travel_getCarrySpace")
@@ -118,7 +118,7 @@ object HubContract : SmartContract() {
          if (operation === "test_travel_getOwnerScriptHash")
             return args[0].travel_getOwnerScriptHash()
          if (operation === "test_travel_findMatchableTravel")
-            return args[0].travel_findMatchableTravel(BigInteger(args[1]), BigInteger(args[2]), (args[3] as Int?)!!, true)
+            return args[0].travel_findMatchableTravel(BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), (args[4] as Int?)!!, true)
          if (operation === "test_stats_recordDemandCreation")
             return stats_recordDemandCreation()
          if (operation === "test_stats_recordCityUsage")
@@ -841,9 +841,10 @@ object HubContract : SmartContract() {
       if (! travelsForCityPair.isEmpty()) {
          val repRequired = this.demand_getRepRequired()
          val carrySpaceRequired = this.demand_getItemSize()
+         val demandExpiry = this.demand_getExpiry()
 
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-         val matchedTravel = travelsForCityPair.travel_findMatchableTravel(repRequired, carrySpaceRequired, nowTime)
+         val matchedTravel = travelsForCityPair.travel_findMatchableTravel(repRequired, carrySpaceRequired, demandExpiry, nowTime)
          if (matchedTravel.isEmpty()) {  // no match
             log_debug("CL:DBG:NoMatchableTravelForDemand:2")
 
@@ -874,7 +875,7 @@ object HubContract : SmartContract() {
             // switch the travel's existing expiry to a new time after the expiry of the demand
             val traveller = matchedTravel.travel_getOwnerScriptHash()
             val extraExpiry = BigInteger.valueOf(TRAVEL_EXTRA_EXPIRY_ON_MATCH)
-            val newExpiry = this.demand_getExpiry() + extraExpiry
+            val newExpiry = demandExpiry + extraExpiry
             matchedTravel.travel_overwriteExpiry(traveller, newExpiry)
             log_info("CL:OK:ReservedDemandValueAndFee:3")
          }
@@ -925,8 +926,7 @@ object HubContract : SmartContract() {
     * @return the [Demand] object or an empty array if nothing found
     */
    private fun DemandList.demands_findMatchableDemand(repRequired: BigInteger, carrySpaceAvailable: BigInteger,
-                                                      nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp(),
-                                                      assumeUnmatched: Boolean = false): Demand {
+                                                      expiresAfter: BigInteger, nowTime: Int, assumeUnmatched: Boolean = false): Demand {
       val nil = byteArrayOf()
       if (this.isEmpty())
          return nil
@@ -943,6 +943,7 @@ object HubContract : SmartContract() {
             ownerRep = owner.wallet_getReputationScore()
          }
          if (expiry.toInt() > nowTime &&
+               expiry > expiresAfter &&
                ownerRep >= repRequired &&
                carrySpaceAvailable >= itemSize &&
                (assumeUnmatched || ! demand.demand_isMatched()))
@@ -1136,9 +1137,10 @@ object HubContract : SmartContract() {
       if (! demandsForCityPair.isEmpty()) {
          val repRequired = this.travel_getRepRequired()
          val carrySpaceAvailable = this.travel_getCarrySpace()
+         val travelExpiry = this.travel_getExpiry()
 
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-         val matchedDemand = demandsForCityPair.demands_findMatchableDemand(repRequired, carrySpaceAvailable, nowTime)
+         val matchedDemand = demandsForCityPair.demands_findMatchableDemand(repRequired, carrySpaceAvailable, travelExpiry, nowTime)
          if (! matchedDemand.isEmpty()) {
             // match travel -> demand
             val matchKey = this.travel_getMatchKey()
@@ -1238,12 +1240,12 @@ object HubContract : SmartContract() {
     *
     * @param repRequired the desired reputation of the traveller
     * @param carrySpaceRequired the carry space required (scale of 1-5)
+    * @param expiryLimit must expire before this limit (normally the demand's expiry time)
     * @param nowTime the current unix timestamp in seconds
     * @return the [Travel] object or an empty array if nothing found
     */
    private fun TravelList.travel_findMatchableTravel(repRequired: BigInteger, carrySpaceRequired: BigInteger,
-                                                     nowTime: Int = Blockchain.getHeader(Blockchain.height()).timestamp(),
-                                                     assumeUnmatched: Boolean = false): Travel {
+                                                     expiryLimit: BigInteger, nowTime: Int, assumeUnmatched: Boolean = false): Travel {
       val nil = byteArrayOf()
       if (this.isEmpty())
          return nil
@@ -1260,6 +1262,7 @@ object HubContract : SmartContract() {
             ownerRep = owner.wallet_getReputationScore()
          }
          if (expiry.toInt() > nowTime &&
+               expiry < expiryLimit &&
                ownerRep >= repRequired &&
                carrySpaceAvailable >= carrySpaceRequired &&
                (assumeUnmatched || ! travel.travel_isMatched()))

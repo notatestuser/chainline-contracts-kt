@@ -233,11 +233,12 @@ namespace CLTests {
          var demands = demand1.Concat(demand2).Concat(demand3).ToArray();
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(nowTime);  // args[3] - nowTime
+            sb.EmitPush(nowTime);  // args[4] - nowTime
+            sb.EmitPush(100);  // args[3] - expiresAfter
             sb.EmitPush(1);  // args[2] - carrySpace
             sb.EmitPush(0);  // args[1] - repRequired
             sb.EmitPush(demands);  // args[0]
-            sb.EmitPush(4);
+            sb.EmitPush(5);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_demand_findMatchableDemand");  // operation
             ExecuteScript(engine, sb);
@@ -245,6 +246,64 @@ namespace CLTests {
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
          Assert.Equal(demand3, result);
+      }
+
+      [Fact]
+      public void TestFindMatchableDemandFail() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         var nowTime = 101;
+         byte[] expiredExpiry = BitConverter.GetBytes(100).ToArray();
+         byte[] futureExpiry = BitConverter.GetBytes(102).ToArray();
+
+         // demand1 - already expired
+         var demand1 = expiredExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // itemValue (100000000)
+            0x00, 0xE1, 0xF5, 0x05, 0x00,
+            // owner script hash
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2,
+            0xFF,
+            // repRequired
+            1, 0,
+            // itemSize
+            1
+            // info
+         }).Concat(Info).ToArray();
+
+         // demand2 - expires before supplied `expiresAfter`
+         var demand2 = futureExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // itemValue (100000000)
+            0x00, 0xE1, 0xF5, 0x05, 0x00,
+            // owner script hash
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2,
+            0xFF,
+            // repRequired
+            1, 0,
+            // itemSize
+            1
+            // info
+         }).Concat(Info).ToArray();
+
+         var demands = demand1.Concat(demand2).ToArray();
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(nowTime);  // args[4] - nowTime
+            sb.EmitPush(200);  // args[3] - expiresAfter
+            sb.EmitPush(1);  // args[2] - carrySpace
+            sb.EmitPush(0);  // args[1] - repRequired
+            sb.EmitPush(demands);  // args[0]
+            sb.EmitPush(5);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_demand_findMatchableDemand");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(new byte[] {}, result);
       }
    }
 }

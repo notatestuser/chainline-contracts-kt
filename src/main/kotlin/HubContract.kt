@@ -1567,8 +1567,12 @@ object HubContract : SmartContract() {
    // -==========-
    //region misc
 
+   /**
+    * Inserts the "THROWIFNOT" VM OpCode.
+    * Aborts execution if the supplied [arg] is not true.
+    */
    @OpCode(org.neo.vm._OpCode.THROWIFNOT)
-   private external fun throwIfNot(ret: Any)
+   private external fun throwIfNot(arg: Any)
 
    //endregion
 }

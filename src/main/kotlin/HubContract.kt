@@ -51,7 +51,6 @@ object HubContract : SmartContract() {
    // Maximum values
    // the maximum value of a transaction is fixed at ~5497 GAS so that we can fit it into 5 bytes.
    private const val MAX_GAS_TX_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
-   private const val MAX_INT: Long = 0x7FFFFFFF
 
    // Fees
    private const val FEE_DEMAND_REWARD: Long = 300000000  // 3 GAS
@@ -117,18 +116,12 @@ object HubContract : SmartContract() {
             return args[0].travel_getOwnerScriptHash()
          if (operation === "test_travel_findMatchableTravel")
             return args[0].travel_findMatchableTravel(BigInteger(args[1]), BigInteger(args[2]), (args[3] as Int?)!!, true)
-         if (operation === "test_stats_recordDemandCreation") {
-            stats_recordDemandCreation()
-            return true
-         }
-         if (operation === "test_stats_recordCityUsage") {
-            stats_recordCityUsage(args[0])
-            return true
-         }
-         if (operation === "test_stats_recordReservedFunds") {
-            stats_recordReservedFunds(BigInteger(args[0]))
-            return true
-         }
+         if (operation === "test_stats_recordDemandCreation")
+            return stats_recordDemandCreation()
+         if (operation === "test_stats_recordCityUsage")
+            return stats_recordCityUsage(args[0])
+         if (operation === "test_stats_recordReservedFunds")
+            return stats_recordReservedFunds(BigInteger(args[0]))
       }
       //endregion
 
@@ -373,7 +366,7 @@ object HubContract : SmartContract() {
       }
       var reservations = byteArrayOf()
       if (! overwrite) {
-         val reservations = Storage.get(Storage.currentContext(), this)
+         reservations = Storage.get(Storage.currentContext(), this)
       }
       val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
       val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
@@ -1180,20 +1173,20 @@ object HubContract : SmartContract() {
       owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT), true)
    }
 
-   /**
-    * Reserves the non-expiring deposit due by a traveller when they create a [Travel].
-    *
-    * This method is to be used when a [Travel] has been matched with a [Demand] to provide more risk exposure to
-    * a traveller who may not fulfill their commitment to deliver the consignment.
-    *
-    * Note: Use of this method will overwrite existing reserved funds for this wallet.
-    *
-    * @param owner the traveller's script hash
-    */
-   private fun Travel.travel_reserveNonExpiringDeposit(owner: ScriptHash) {
-      var expiry = BigInteger.valueOf(MAX_INT)
-      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT), true)
-   }
+//   /**
+//    * Reserves the non-expiring deposit due by a traveller when they create a [Travel].
+//    *
+//    * This method is to be used when a [Travel] has been matched with a [Demand] to provide more risk exposure to
+//    * a traveller who may not fulfill their commitment to deliver the consignment.
+//    *
+//    * Note: Use of this method will overwrite existing reserved funds for this wallet.
+//    *
+//    * @param owner the traveller's script hash
+//    */
+//   private fun Travel.travel_reserveNonExpiringDeposit(owner: ScriptHash) {
+//      var expiry = BigInteger.valueOf(MAX_INT)
+//      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT), true)
+//   }
 
    /**
     * Finds a [Travel] in a [TravelList] that fits the given attributes.

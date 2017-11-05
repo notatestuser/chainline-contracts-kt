@@ -73,7 +73,7 @@ namespace CLTests {
             sb.EmitPush("stats_getCityUsageCount");
             ExecuteScript(engine2, sb);
          }
-         var result = engine.EvaluationStack.Peek().GetBigInteger();
+         var result = engine2.EvaluationStack.Peek().GetBigInteger();
          Assert.Equal(1, result);
       }
 

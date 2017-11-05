@@ -135,8 +135,8 @@ object HubContract : SmartContract() {
          return stats_getCityUsageCount()
       if (operation === "stats_getReservedFundsCount")
          return stats_getReservedFundsCount()
-      if (operation === "storage_get")
-         return Storage.get(Storage.currentContext(), args[0])
+      if (operation === "stats_getUserReputationScore")
+         return args[0].wallet_getReputationScore()
 
       // Can't call IsInitialized() from here 'cause the compiler don't like it
       if (Storage.get(Storage.currentContext(), STORAGE_KEY_INITIALIZED).isEmpty()) {
@@ -147,8 +147,12 @@ object HubContract : SmartContract() {
       // Wallet query operations
       if (operation === "wallet_validate")
          return args[0].wallet_validate(args[1])
-      if (operation === "wallet_getReputationScore")
-         return args[0].wallet_getReputationScore()
+      if (operation === "wallet_requestTxOut") {
+         if (args[0].wallet_validate(args[1]))
+            return args[0].wallet_requestTxOut()
+         Runtime.notify("CL:ERR:InvalidWallet")
+         return false
+      }
       if (operation === "wallet_getGasBalance")
          return args[0].wallet_getGasBalance()
       if (operation === "wallet_getReservedGasBalance") {
@@ -159,23 +163,14 @@ object HubContract : SmartContract() {
       }
       if (operation === "wallet_getFundReservations")
          return args[0].wallet_getFundReservations()
-      if (operation === "wallet_requestTxOut") {
-         if (args[0].wallet_validate(args[1])) {
-            val reservations = args[0].wallet_getFundReservations()
-            return args[0].wallet_requestTxOut(reservations)
-         }
-         Runtime.notify("CL:ERR:InvalidWallet")
-         return false
-      }
       if (operation === "wallet_setReservationPaidToRecipientTxHash") {
          if (args[0].wallet_validate(args[1])) {
+            // if this passes the entire Chain Line transaction is complete
             val check = args[0].wallet_setReservationPaidToRecipientTxHash(args[2], BigInteger(args[3]), args[4])
             if (check) {
-               // reset account states, allow new transactions
-               Storage.delete(Storage.currentContext(), args[0])  // reset demand owner state
-               Storage.delete(Storage.currentContext(), args[2])  // reset traveller/recipient state
-               args[0].wallet_clearFundReservations()
-               args[2].wallet_clearFundReservations()
+               // reset account states, allow for new transactions
+               args[0].wallet_clearState()
+               args[2].wallet_clearState()
 
                // increment account reputation scores
                args[0].wallet_incrementReputationScore()
@@ -218,24 +213,27 @@ object HubContract : SmartContract() {
          val demand = Storage.get(Storage.currentContext(), matchKey)
          return demand.demand_getMatchedAtTime()
       }
+      // generic catch-all storage get
+      if (operation === "storage_get")
+         return Storage.get(Storage.currentContext(), args[0])
 
-      // The following operations can write state, so checkWitness
+      // the following operations can write state; verify that the sender is who they claim they are
       val sender: ScriptHash = args[0]
       throwIfNot(Runtime.checkWitness(sender))  // kotlin workaround
       log_info("CL:OK:checkWitness")
 
-      // Open and try to match a Demand
+      // open and try to match a Demand
       if (operation === "demand_open") {
-         if (args[0].wallet_validate(args[1]) &&
+         if (args[0].wallet_validate(args[1], BigInteger(args[5]).toLong()) &&
                args[0].wallet_canOpenDemandOrTravel()) {
             val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6])
             return demand.demand_storeAndMatch(args[0], args[7], args[8])
          }
          return false
       }
-      // Open and try to match a Travel
+      // open and try to match a Travel
       if (operation === "travel_open") {
-         if (args[0].wallet_validate(args[1]) &&
+         if (args[0].wallet_validate(args[1], FEE_TRAVEL_DEPOSIT) &&
                args[0].wallet_canOpenDemandOrTravel()) {
             val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]))
             return travel.travel_storeAndMatch(args[0], args[5], args[6])
@@ -288,8 +286,10 @@ object HubContract : SmartContract() {
     * Validates an individual user wallet.
     *
     * @param pubKey the script hash of the user wallet to validate
+    * @return true if the wallet is valid
     */
    private fun ScriptHash.wallet_validate(pubKey: PublicKey): Boolean {
+      log_debug("CL:DBG:wallet_validate")
       val expectedScript =
             getWalletScriptP1()
                .concat(pubKey)
@@ -299,9 +299,19 @@ object HubContract : SmartContract() {
       val expectedScriptHash = hash160(expectedScript)
       if (this === expectedScriptHash)
          return true
-      Runtime.notify("CL:ERR:WalletValidateFail", expectedScriptHash, expectedScript)  // the compiler does not like log_* here
+      Runtime.notify("CL:ERR:WalletValidate", expectedScriptHash, expectedScript)  // the compiler does not like log_* here
       return false
    }
+
+   /**
+    * Validates an individual user wallet and checks its effective balance to ensure a transaction is clear to proceed.
+    *
+    * @param pubKey the script hash of the user wallet to validate
+    * @param outgoingAmount the outgoing amount of GAS as a fixed8 long
+    * @return true if the transaction is clear to proceed
+    */
+   private fun ScriptHash.wallet_validate(pubKey: PublicKey, outgoingAmount: Long): Boolean =
+      this.wallet_validate(pubKey) && this.wallet_hasFunds(outgoingAmount)
 
    /**
     * Gets the GAS balance of a user wallet.
@@ -315,13 +325,12 @@ object HubContract : SmartContract() {
    }
 
    /**
-    * Requests permission to perform a withdrawal from a previously validated user wallet.
+    * Requests permission to perform a withdrawal from a validated user wallet using the value in tx outputs.
     * Note: Please ensure that the wallet has been validated before this is called.
     *
-    * @param reservations the list of [reserved funds objects][Reservation] for the wallet
-    * @return true if the transaction was cleared
+    * @return true if the transaction is clear to proceed
     */
-   private fun ScriptHash.wallet_requestTxOut(reservations: ReservationList): Boolean {
+   private fun ScriptHash.wallet_requestTxOut(): Boolean {
       log_debug("CL:DBG:requestTxOut")
       // need to count the outputs again for security - a user could invoke directly with a fake value.
       // we have already validated the calling script at this point, we don't need to get the script hash from ExecutionEngine
@@ -337,13 +346,25 @@ object HubContract : SmartContract() {
       }
 
       // check if balance is enough after reserved funds are considered
-      val balance = this.wallet_getGasBalance()
+      return this.wallet_hasFunds(gasTxValue)
+   }
+
+   /**
+    * Check if the wallet has enough funds to perform a transaction after reserved funds are considered.
+    *
+    * @param amount the amount to be transferred out
+    * @return true if the wallet's balance is sufficient
+    */
+   private fun ScriptHash.wallet_hasFunds(amount: Long): Boolean {
+      log_debug("CL:DBG:wallet_hasFunds")
       val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+      val reservations = this.wallet_getFundReservations()
       val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
+      val balance = this.wallet_getGasBalance()
       val effectiveBalance = balance - gasOnHold
-      if (effectiveBalance < gasTxValue) {
-         Runtime.notify("CL:ERR:InsufficientBalance")
-         return false  // insufficient non-reserved funds
+      if (effectiveBalance < amount) {
+         log_debug("CL:DBG:InsufficientFunds")
+         return false
       }
       return true
    }
@@ -492,6 +513,14 @@ object HubContract : SmartContract() {
    private fun ScriptHash.wallet_clearFundReservations() {
       val key = this.wallet_getFundReservationsStorageKey()
       Storage.delete(Storage.currentContext(), key)
+   }
+
+   /**
+    * Clears all wallet system state, allowing for new Chain Line transactions.
+    */
+   private fun ScriptHash.wallet_clearState() {
+      Storage.delete(Storage.currentContext(), this)
+      this.wallet_clearFundReservations()
    }
 
    /**

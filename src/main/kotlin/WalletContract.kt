@@ -13,12 +13,6 @@ import org.neo.smartcontract.framework.services.system.ExecutionEngine
 //       C  H  A  I  N     L  I  N  E
 
 object WalletContract : SmartContract() {
-   @Appcall("571608ac8b5fbf410bd0911039c35508b5e42706")
-   private external fun HubContract(operation: String, vararg args: Any): Boolean
-
-   @OpCode(org.neo.vm._OpCode.THROWIFNOT)
-   private external fun throwIfNot(ret: Any)
-
    /**
     * The entry point of the smart contract.
     * @param operation The method to run, specified as a string.
@@ -50,28 +44,29 @@ object WalletContract : SmartContract() {
       //if (Runtime.trigger() !== TriggerType.Verification)
       //   return true
 
-      // get the GAS value in tx outputs
-      // todo: move this into the Hub to protect the invoke entry point
+      // count the list of outputs just so that we don't call the HubContract on local invoke
       val tx = ExecutionEngine.scriptContainer() as Transaction?
-      val executingScriptHash = ExecutionEngine.executingScriptHash()
       val outputs = tx!!.outputs()
-      var gasTxValue: Long = 0  // as a fixed8 int
-      var recipientIdx = 0
-      outputs.forEachIndexed { idx, it ->
-         // invokes will not count as their GAS is sent back to the caller
-         if (it.scriptHash() !== executingScriptHash &&
-               it.assetId() === gasAssetId) {
-            gasTxValue += it.value()
-            recipientIdx = idx
-         }
+      if (!outputs.isEmpty()) {
+         // call the HubContract to validate the withdrawal
+         val executingScriptHash = ExecutionEngine.executingScriptHash()
+         return HubContract("wallet_requestTxOut", executingScriptHash, ownerPubKey)
       }
 
-      // call the HubContract to validate the withdrawal
-      if (gasTxValue > 0) {
-         val recipient = outputs[recipientIdx].scriptHash()
-         return HubContract("wallet_requestTxOut", executingScriptHash, ownerPubKey, recipient, gasTxValue)
-      }
-
+      // allow anything else
       return true
    }
+
+   /**
+    * Calls the [HubContract] with the specified [operation] and [args].
+    */
+   @Appcall("571608ac8b5fbf410bd0911039c35508b5e42706")
+   private external fun HubContract(operation: String, vararg args: Any): Boolean
+
+   /**
+    * Inserts the "THROWIFNOT" VM OpCode.
+    * Aborts execution if the supplied [arg] is not true.
+    */
+   @OpCode(org.neo.vm._OpCode.THROWIFNOT)
+   private external fun throwIfNot(arg: Any)
 }

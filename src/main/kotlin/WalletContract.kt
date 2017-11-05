@@ -35,7 +35,7 @@ object WalletContract : SmartContract() {
             20, 142 as Byte, 119, 88, 222 as Byte, 66, 228 as Byte, 22, 139 as Byte, 113, 121, 44, 96)
 
       // verify the signature against the wallet owner's pubkey
-      // THROWIFNOT because the InteropInterface VM type cannot be consumed via GetByteArray() (https://git.io/vFcJf)
+      // this is used because the InteropInterface VM type cannot be consumed via GetByteArray() (https://git.io/vFcJf)
       // unfortunately that is what !call() previously made the VM do here (it becomes IFNE -> NUMNOTEQUAL, then FAULT)
       throwIfNot(verifySignature(signature, ownerPubKey))
 
@@ -44,14 +44,21 @@ object WalletContract : SmartContract() {
       //if (Runtime.trigger() !== TriggerType.Verification)
       //   return true
 
-      // count the list of outputs just so that we don't call the HubContract on local invoke
+      // find the GAS value of tx outputs, is there an outgoing value?
       val tx = ExecutionEngine.scriptContainer() as Transaction?
+      val executingScriptHash = ExecutionEngine.executingScriptHash()
       val outputs = tx!!.outputs()
-      if (!outputs.isEmpty()) {
-         // call the HubContract to validate the withdrawal
-         val executingScriptHash = ExecutionEngine.executingScriptHash()
-         return HubContract("wallet_requestTxOut", executingScriptHash, ownerPubKey)
+      var gasTxValue: Long = 0  // as a fixed8 int
+      outputs.forEach {
+         // invokes will not count as their GAS is returned to the caller
+         if (it.scriptHash() !== executingScriptHash &&
+               it.assetId() === gasAssetId)
+            gasTxValue += it.value()
       }
+
+      // call the HubContract to validate the withdrawal
+      if (gasTxValue > 0)
+         return HubContract("wallet_requestTxOut", executingScriptHash, ownerPubKey)
 
       // allow anything else
       return true
@@ -60,7 +67,7 @@ object WalletContract : SmartContract() {
    /**
     * Calls the [HubContract] with the specified [operation] and [args].
     */
-   @Appcall("571608ac8b5fbf410bd0911039c35508b5e42706")
+   @Appcall("5cd7fe13c0762432bf151191b948c0436d3354c4")
    private external fun HubContract(operation: String, vararg args: Any): Boolean
 
    /**

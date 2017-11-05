@@ -67,6 +67,9 @@ object HubContract : SmartContract() {
    private const val STORAGE_KEY_INIT_WALLET_P3 = "WalletScriptP3"
    private const val STORAGE_KEY_INITIALIZED = "Initialized"
 
+   // Settings
+   private const val TRAVEL_EXTRA_EXPIRY_ON_MATCH: Long = 86400  // 24 hours
+
    /**
     * The entry point of the smart contract.
     *
@@ -798,6 +801,7 @@ object HubContract : SmartContract() {
       // no travels available! no match can be made yet
       if (travelsForCityPair.isEmpty()) {
          log_debug("CL:DBG:NoMatchableTravelForDemand:1")
+
          // reserve the item's value and fee (no match yet, reserve for later)
          this.demand_reserveValueAndFee(owner)
          log_info("CL:OK:ReservedDemandValueAndFee:1")
@@ -816,7 +820,6 @@ object HubContract : SmartContract() {
 
             // reserve the item's value and fee (no match yet, reserve for later)
             this.demand_reserveValueAndFee(owner)
-
             log_info("CL:OK:ReservedDemandValueAndFee:2")
          } else {
             // match demand -> travel
@@ -825,28 +828,29 @@ object HubContract : SmartContract() {
             val matchKey = this.demand_getMatchKey()
             val timestampedMatch = matchedTravel.concat(nowTimeBytes)
             Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
+            log_info("CL:OK:MatchedDemandWithTravel")
 
             // match travel -> demand
             val otherMatchKey = matchedTravel.travel_getMatchKey()
             val timestampedOtherMatch = this.concat(nowTimeBytes)
             Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
-
-            log_info("CL:OK:MatchedDemandWithTravel")
+            log_info("CL:OK:MatchedTravelWithDemand")
 
             // reserve the item's value and fee
             // this will overwrite existing fund reservations for this wallet
             // since we found a matchable travel we can set the recipient's script hash in the reservation (matchedTravel)
             this.demand_reserveValueAndFee(owner, matchedTravel)
+            log_info("CL:OK:ReservedDemandValue")
 
-            // switch the traveller's existing deposit reservation to a non-expiring one
-            // todo: Disabled for now, an expiring deposit is a solution to potential problems with unsatisfactory or impossible demands
-            //       beyond the MVP we will be able to use a matching system to overcome the need for this
-            // val traveller = matchedTravel.travel_getOwnerScriptHash()
-            // matchedTravel.travel_reserveNonExpiringDeposit(traveller)
-
+            // switch the travel's existing expiry to a new time after the expiry of the demand
+            val traveller = matchedTravel.travel_getOwnerScriptHash()
+            val extraExpiry = BigInteger.valueOf(TRAVEL_EXTRA_EXPIRY_ON_MATCH)
+            val newExpiry = this.demand_getExpiry() + extraExpiry
+            matchedTravel.travel_overwriteExpiry(traveller, newExpiry)
             log_info("CL:OK:ReservedDemandValueAndFee:3")
          }
       }
+      // match or no match, this was a success.
       return true
    }
 
@@ -1113,21 +1117,22 @@ object HubContract : SmartContract() {
             val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
             val timestampedMatch = matchedDemand.concat(nowTimeBytes)
             Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
+            log_info("CL:OK:TravelWithDemand")
 
             // match demand -> travel
             val otherMatchKey = matchedDemand.demand_getMatchKey()
             val timestampedOtherMatch = this.concat(nowTimeBytes)
             Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
+            log_info("CL:OK:MatchedDemandWithTravel")
 
-            log_info("CL:OK:MatchedTravelWithDemand")
-
-            // re-reserve the non-expiring security deposit
+            // switch the traveller's existing deposit reservation to one that expires after the demand
             // unfortunately this line must be here due to compiler troubles with anything more complex
-            // todo: Disabled for now, an expiring deposit is a solution to potential problems with unsatisfactory or impossible demands
-            //       beyond the MVP we will be able to use a matching system to overcome the need for this
-            //this.travel_reserveNonExpiringDeposit(owner)
+            val extraExpiry = BigInteger.valueOf(TRAVEL_EXTRA_EXPIRY_ON_MATCH)
+            val newExpiry = matchedDemand.demand_getExpiry() + extraExpiry
+            this.travel_overwriteExpiry(owner, newExpiry)
+            log_info("CL:OK:UpdatedTravelExpiry")
 
-            // rewrite the reservation that was created with the matched demand
+            // overwrite the reservation that was created with the matched demand
             // this means that we inject the traveller's script hash as the "recipient" of the reserved funds
             // when a transaction to withdraw the funds is received (multi-sig) the destination wallet must match this one
             val demandOwner = matchedDemand.demand_getOwnerScriptHash()
@@ -1137,10 +1142,13 @@ object HubContract : SmartContract() {
             if (reservationAtIdx > 0) {
                val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
                demandOwner.wallet_storeFundReservations(rewrittenReservationList)
-
                log_info("CL:OK:RewroteDemandFundsReservation")
+
             } else {
+               // the reservation could not be found, which should never happen.
+               // todo: this has put us in a weird state which should definitely be rolled back.
                Runtime.notify("CL:ERR:ReservationForDemandNotFound")
+               return false
             }
          } else if (LOG_LEVEL > 2) {
             Runtime.notify("CL:DBG:NoMatchableDemandForTravel:1")
@@ -1148,6 +1156,7 @@ object HubContract : SmartContract() {
       } else if (LOG_LEVEL > 2) {
          Runtime.notify("CL:DBG:NoMatchableDemandForTravel:2")
       }
+      // match or no match, this was a success.
       return true
    }
 
@@ -1173,20 +1182,27 @@ object HubContract : SmartContract() {
       owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT), true)
    }
 
-//   /**
-//    * Reserves the non-expiring deposit due by a traveller when they create a [Travel].
-//    *
-//    * This method is to be used when a [Travel] has been matched with a [Demand] to provide more risk exposure to
-//    * a traveller who may not fulfill their commitment to deliver the consignment.
-//    *
-//    * Note: Use of this method will overwrite existing reserved funds for this wallet.
-//    *
-//    * @param owner the traveller's script hash
-//    */
-//   private fun Travel.travel_reserveNonExpiringDeposit(owner: ScriptHash) {
-//      var expiry = BigInteger.valueOf(MAX_INT)
-//      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT), true)
-//   }
+   /**
+    * Re-reserves the deposit due by a traveller when they create a [Travel] with a revised expiry time.
+    * This method also updates a wallet's "state lock" with the new expiry time.
+    *
+    * This method is to be used when a [Travel] has been matched with a [Demand] to match up the expiry times
+    * of both objects.
+    *
+    * Note: Use of this method will overwrite the existing reserved funds record for the owner's wallet.
+    *
+    * @param owner the traveller's script hash
+    * @param expiry the new expiry time
+    */
+   private fun Travel.travel_overwriteExpiry(owner: ScriptHash, expiry: BigInteger) {
+      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT), true)
+
+      // overwrite the expiry in the traveller's "state lock" object too
+      val expiryBytes = expiry.toByteArray(TIMESTAMP_SIZE)
+      val travelRemainder = range(this, TIMESTAMP_SIZE, TRAVEL_SIZE - TIMESTAMP_SIZE)
+      val newTravel = expiryBytes.concat(travelRemainder)
+      Storage.put(Storage.currentContext(), owner, newTravel)
+   }
 
    /**
     * Finds a [Travel] in a [TravelList] that fits the given attributes.

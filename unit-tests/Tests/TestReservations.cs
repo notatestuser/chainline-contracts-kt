@@ -128,7 +128,39 @@ namespace CLTests {
       }
 
       [Fact]
-      public void TestReservationFindBy() {
+      public void TestReservationFindByValue() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         var reservations = new byte[] {
+            // entry 0
+            0xFF, 0xFF, 0xFF, 0x7F, // timestamp is 4 bytes
+            10, 0, 0, 0, 0,  // value is 5 bytes
+            1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
+            // entry 1
+            0x01, 0x00, 0x00, 0x00, // timestamp is 4 bytes
+            20, 0, 0, 0, 0,  // value is 5 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1,
+            // entry 2
+            0x02, 0x00, 0x00, 0x00, // timestamp is 4 bytes
+            30, 0, 0, 0, 0,  // value is 5 bytes
+            1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
+         };
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(30);  // args[1]
+            sb.EmitPush(reservations);  // args[0]
+            sb.EmitPush(2);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_reservations_findByValue");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetBigInteger();
+         Assert.Equal(2, result);
+      }
+
+      [Fact]
+      public void TestReservationFindByValueAndRecipient() {
          ExecutionEngine engine = LoadContract("HubContract");
 
          var reservations = new byte[] {
@@ -156,7 +188,7 @@ namespace CLTests {
             sb.EmitPush(reservations);  // args[0]
             sb.EmitPush(3);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_reservations_findBy");  // operation
+            sb.EmitPush("test_reservations_findByValueAndRecipient");  // operation
             ExecuteScript(engine, sb);
          }
 
@@ -193,7 +225,7 @@ namespace CLTests {
             sb.EmitPush(reservations);  // args[0]
             sb.EmitPush(3);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_reservations_findBy");  // operation
+            sb.EmitPush("test_reservations_findByValueAndRecipient");  // operation
             ExecuteScript(engine, sb);
          }
 

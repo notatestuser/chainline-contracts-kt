@@ -133,10 +133,8 @@ object HubContract : SmartContract() {
             return args[0].travel_findMatchableTravel(BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), (args[4] as Int?)!!, true)
          if (operation === "test_stats_recordDemandCreation")
             return stats_recordDemandCreation()
-         if (operation === "test_stats_recordCityUsage")
-            return stats_recordCityUsage(args[0])
-         if (operation === "test_stats_recordCityUsage2")
-            return stats_recordCityUsage2(args[0], args[1])
+         if (operation === "test_stats_recordRouteUsage")
+            return stats_recordRouteUsage(args[0])
          if (operation === "test_stats_recordReservedFunds")
             return stats_recordReservedFunds(BigInteger(args[0]))
       }
@@ -146,8 +144,8 @@ object HubContract : SmartContract() {
       if (STATS_ENABLED) {
          if (operation === "stats_getDemandsCount")
             return stats_getDemandsCount()
-         if (operation === "stats_getCityUsageCount")
-            return stats_getCityUsageCount()
+         if (operation === "stats_getRouteUsageCount")
+            return stats_getRouteUsageCount()
          if (operation === "stats_getReservedFundsCount")
             return stats_getReservedFundsCount()
          if (operation === "stats_getUserReputationScore")
@@ -255,7 +253,7 @@ object HubContract : SmartContract() {
             if (STATS_ENABLED) {  // the compiler will optimize this out if disabled
                log_debug("CL:DBG:RecordingStats")
                stats_recordDemandCreation()
-               stats_recordCityUsage2(args[7], args[8])
+               stats_recordRouteUsage(args[7])
                stats_recordReservedFunds(BigInteger(args[5]))
             }
             return true
@@ -274,7 +272,7 @@ object HubContract : SmartContract() {
             if (travel.travel_storeAndMatch(args[0], args[5], nowTime)) {
                if (STATS_ENABLED) {
                   log_debug("CL:DBG:RecordingStats")
-                  stats_recordCityUsage2(args[5], args[6])
+                  stats_recordRouteUsage(args[5])
                   stats_recordReservedFunds(BigInteger.valueOf(FEE_TRAVEL_DEPOSIT))
                }
                return true
@@ -1417,18 +1415,18 @@ object HubContract : SmartContract() {
    }
 
    /**
-    * Increments the counter that keeps the number of unique cities used over time.
+    * Increments the counter that keeps the number of unique routes used over time.
     *
-    * @see stats_getCityUsageCount
+    * @see stats_getRouteUsageCount
     */
-   private fun stats_recordCityUsage(city: Hash160) {
-      val isRecorded = Storage.get(Storage.currentContext(), city)
+   private fun stats_recordRouteUsage(cityPairHash: Hash160) {
+      val isRecorded = Storage.get(Storage.currentContext(), cityPairHash)
       if (isRecorded.isEmpty()) {
          val key = STORAGE_KEY_STATS_CITIES
          val trueBytes = byteArrayOf(1)
          val existingBytes = Storage.get(Storage.currentContext(), key)
          // don't count this city again
-         Storage.put(Storage.currentContext(), city, trueBytes)
+         Storage.put(Storage.currentContext(), cityPairHash, trueBytes)
          // increment counter
          if (!existingBytes.isEmpty()) {
             val existing = BigInteger(existingBytes)
@@ -1438,16 +1436,6 @@ object HubContract : SmartContract() {
             Storage.put(Storage.currentContext(), key, trueBytes)  // trueBytes == 1 as BigInteger
          }
       }
-   }
-
-   /**
-    * Calls [stats_recordCityUsage] for two cities.
-    *
-    * @see stats_recordCityUsage
-    */
-   private fun stats_recordCityUsage2(city1: Hash160, city2: Hash160) {
-      stats_recordCityUsage(city1)
-      stats_recordCityUsage(city2)
    }
 
    /**
@@ -1474,9 +1462,9 @@ object HubContract : SmartContract() {
    private fun stats_getDemandsCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_DEMANDS))
 
    /**
-    * Returns the number of unique cities used over time.
+    * Returns the number of unique routes used over time.
     */
-   private fun stats_getCityUsageCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_CITIES))
+   private fun stats_getRouteUsageCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_CITIES))
 
    /**
     * Returns the amount of funds reserved over time as a fixed8 int.

@@ -43,12 +43,12 @@ namespace CLTests {
          Assert.Equal(1, result);
       }
 
-      public void TestCityUsageStatsZero() {
+      public void TestRouteUsageStatsZero() {
          ExecutionEngine engine = LoadContract("HubContract");
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(0);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("stats_getCityUsageCount");
+            sb.EmitPush("stats_getRouteUsageCount");
             ExecuteScript(engine, sb);
          }
          var result = engine.EvaluationStack.Peek().GetBigInteger();
@@ -56,20 +56,20 @@ namespace CLTests {
       }
 
       [Fact]
-      public void TestCityUsageStatsNonZero() {
+      public void TestRouteUsageStatsNonZero() {
          ExecutionEngine engine = LoadContract("HubContract");
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(new byte[] { 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 });
             sb.EmitPush(1);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_stats_recordCityUsage");  // operation
+            sb.EmitPush("test_stats_recordRouteUsage");  // operation
             ExecuteScript(engine, sb);
          }
          ExecutionEngine engine2 = LoadContract("HubContract");
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(0);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("stats_getCityUsageCount");
+            sb.EmitPush("stats_getRouteUsageCount");
             ExecuteScript(engine2, sb);
          }
          var result = engine2.EvaluationStack.Peek().GetBigInteger();
@@ -77,24 +77,31 @@ namespace CLTests {
       }
 
       [Fact]
-      public void TestCityUsageStats2NonZero() {
+      public void TestRouteUsageStatsTwo() {
          ExecutionEngine engine = LoadContract("HubContract");
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(new byte[] { 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1 });
             sb.EmitPush(new byte[] { 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 });
-            sb.EmitPush(2);
+            sb.EmitPush(1);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("test_stats_recordCityUsage2");  // operation
+            sb.EmitPush("test_stats_recordRouteUsage");  // operation
             ExecuteScript(engine, sb);
          }
          ExecutionEngine engine2 = LoadContract("HubContract");
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(0);
+            sb.EmitPush(new byte[] { 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1 });
+            sb.EmitPush(1);
             sb.Emit(OpCode.PACK);
-            sb.EmitPush("stats_getCityUsageCount");
+            sb.EmitPush("test_stats_recordRouteUsage");  // operation
             ExecuteScript(engine2, sb);
          }
-         var result = engine2.EvaluationStack.Peek().GetBigInteger();
+         ExecutionEngine engine3 = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(0);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("stats_getRouteUsageCount");
+            ExecuteScript(engine3, sb);
+         }
+         var result = engine3.EvaluationStack.Peek().GetBigInteger();
          Assert.Equal(2, result);
       }
 

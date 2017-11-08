@@ -31,7 +31,7 @@ object HubContract : SmartContract() {
    private const val LOG_LEVEL = 3  // 1: errors, 2: info/warn, 3: debug
    private const val TESTS_ENABLED = true
    private const val STATS_ENABLED = true
-   private const val SECURITY_ENABLED = false  // checkWitness and wallet validation
+   private const val SECURITY_ENABLED = false  // enables checkWitness and wallet validation
 
    // Byte array sizes
    private const val VALUE_SIZE = 5
@@ -55,7 +55,7 @@ object HubContract : SmartContract() {
    private const val MAX_GAS_TX_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
 
    // Fees
-   private const val FEE_DEMAND_REWARD: Long = 300000000  // 3 GAS
+   private const val FEE_DEMAND_REWARD: Long = 300000000   // 3 GAS
    private const val FEE_TRAVEL_DEPOSIT: Long = 100000000  // 1 GAS
 
    // Storage keys
@@ -75,19 +75,23 @@ object HubContract : SmartContract() {
    /**
     * The entry point of the smart contract.
     *
-    * @param operation The method to run, specified as a string.
-    * @param args A variable length array of arguments provided to the method.
+    * @param operation the method to run, specified as a string.
+    * @param args a variable length array of arguments provided to the method.
     */
    fun Main(operation: String, vararg args: ByteArray) : Any {
       // The entry points for each of the supported operations follow
 
-      // Initialization
+      //region Initialization
+
       if (operation === "initialize")
          return initialize(args[0], args[1], args[2])
       if (operation === "is_initialized")
          return isInitialized()
 
-      //region Test operations
+      //endregion
+
+      //region Test Entry Points
+
       if (TESTS_ENABLED) {
          if (operation === "test_initialize_getP1")
             return getWalletScriptP1()
@@ -142,7 +146,8 @@ object HubContract : SmartContract() {
       }
       //endregion
 
-      // Stats query operations
+      //region System Stats
+
       if (STATS_ENABLED) {
          if (operation === "stats_getDemandsCount")
             return stats_getDemandsCount()
@@ -154,13 +159,17 @@ object HubContract : SmartContract() {
             return args[0].wallet_getReputationScore()
       }
 
+      //endregion
+
       // IsInitialized() - Compiler doesn't like that call being here
       if (Storage.get(Storage.currentContext(), STORAGE_KEY_INITIALIZED).isEmpty()) {
          Runtime.notify("CL:ERR:HubNotInitialized")
          return false
       }
 
-      // Wallet query operations
+      //region State Getters (Read Only, Local Invoke)
+
+      // Wallet
       if (operation === "wallet_validate")
          return args[0].wallet_validate(args[1])
       if (operation === "wallet_requestTxOut") {
@@ -199,12 +208,7 @@ object HubContract : SmartContract() {
          }
          return false
       }
-
-      // State query operations
-      if (operation === "wallet_getState") {
-         val stateKey = args[0].wallet_getStateStorageKey()
-         return Storage.get(Storage.currentContext(), stateKey)
-      }
+      // System State
       if (operation === "demand_isMatched")
          return args[0].demand_isMatched()
       if (operation === "demand_getMatchKey")
@@ -231,9 +235,13 @@ object HubContract : SmartContract() {
          val demand = Storage.get(Storage.currentContext(), matchKey)
          return demand.demand_getMatchedAtTime()
       }
-      // Generic catch-all storage get
+      // Generic catch-all storage getter
       if (operation === "storage_get")
          return Storage.get(Storage.currentContext(), args[0])
+
+      //endregion
+
+      //region State Mutators (Blockchain Invokes)
 
       // The following operations can write state; verify that the sender is who they claim they are
       if (SECURITY_ENABLED)
@@ -288,6 +296,8 @@ object HubContract : SmartContract() {
             }
          }
       }
+
+      //endregion
 
       return false
    }
@@ -589,11 +599,6 @@ object HubContract : SmartContract() {
       val combined = this.concat(suffix)
       return combined
    }
-
-   /**
-    * Gets the storage key used to store/lookup state information for a wallet.
-    */
-   private fun ScriptHash.wallet_getStateStorageKey() = this
 
    //endregion
 

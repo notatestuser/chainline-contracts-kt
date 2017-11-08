@@ -121,8 +121,23 @@ namespace CLTests {
          }
 
          var result = engine.EvaluationStack.Peek().GetBigInteger();
-
          Assert.Equal(100000000, result);
+      }
+
+      [Fact]
+      public void TestGetDemandTotalValue() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(Demand);
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_demand_getTotalValue");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetBigInteger();
+         Assert.Equal(400000000, result);  // item + fee (3 GAS)
       }
 
       [Fact]

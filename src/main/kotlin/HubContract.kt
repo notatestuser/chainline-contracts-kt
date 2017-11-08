@@ -62,8 +62,8 @@ object HubContract : SmartContract() {
    private const val STORAGE_KEY_SUFFIX_DEMAND: Byte = 1
    private const val STORAGE_KEY_SUFFIX_TRAVEL: Byte = 2
    private const val STORAGE_KEY_STATS_DEMANDS = "DemandsCounter"
-   private const val STORAGE_KEY_STATS_CITIES = "CitiesCounter"
-   private const val STORAGE_KEY_STATS_FUNDS = "ReservedFundsCounter"
+   private const val STORAGE_KEY_STATS_ROUTES = "RoutesCounter"
+   private const val STORAGE_KEY_STATS_FUNDS = "FundsCounter"
    private const val STORAGE_KEY_INIT_WALLET_P1 = "WalletScriptP1"
    private const val STORAGE_KEY_INIT_WALLET_P2 = "WalletScriptP2"
    private const val STORAGE_KEY_INIT_WALLET_P3 = "WalletScriptP3"
@@ -111,6 +111,8 @@ object HubContract : SmartContract() {
             return demand_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), args[5])
          if (operation === "test_demand_getItemValue")
             return args[0].demand_getItemValue()
+         if (operation === "test_demand_getTotalValue")
+            return args[0].demand_getTotalValue()
          if (operation === "test_demand_getInfoBlob")
             return args[0].demand_getInfoBlob()
          if (operation === "test_demand_getLookupKey")
@@ -244,28 +246,30 @@ object HubContract : SmartContract() {
       // Open and try to match a Demand
       if (operation === "demand_open") {
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-         if (SECURITY_ENABLED)
-            if (! args[0].wallet_validate2(args[1], BigInteger(args[5]).toLong(), nowTime))
+         if (SECURITY_ENABLED) {
+            val outgoingAmount = BigInteger(args[5])
+            if (! args[0].wallet_validateFunds(args[1], outgoingAmount as Long, nowTime))
                return false
+         }
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6])
-            demand.demand_storeAndMatch(args[0], args[7], nowTime)
-            if (STATS_ENABLED) {  // the compiler will optimize this out if disabled
-               log_debug("CL:DBG:RecordingStats")
-               stats_recordDemandCreation()
-               stats_recordRouteUsage(args[7])
-               stats_recordReservedFunds(BigInteger(args[5]))
+            if (demand.demand_storeAndMatch(args[0], args[7], nowTime)) {
+               if (STATS_ENABLED) {  // the compiler will optimize this out if disabled
+                  Runtime.notify("CL:DBG:RecordingStats")
+                  stats_recordRouteUsage(args[7])
+                  stats_recordReservedFunds(BigInteger(args[5]))
+                  stats_recordDemandCreation()
+               }
+               return true
             }
-            return true
          }
-         return false
       }
 
       // Open and try to match a Travel
       if (operation === "travel_open") {
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
          if (SECURITY_ENABLED)
-            if (! args[0].wallet_validate2(args[1], FEE_TRAVEL_DEPOSIT, nowTime))
+            if (! args[0].wallet_validateFunds(args[1], FEE_TRAVEL_DEPOSIT, nowTime))
                return false
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]))
@@ -349,7 +353,7 @@ object HubContract : SmartContract() {
     * @param outgoingAmount the outgoing amount of GAS as a fixed8 long
     * @return true if the transaction is clear to proceed
     */
-   private fun ScriptHash.wallet_validate2(pubKey: PublicKey, outgoingAmount: Long, nowTime: Int): Boolean =
+   private fun ScriptHash.wallet_validateFunds(pubKey: PublicKey, outgoingAmount: Long, nowTime: Int): Boolean =
       this.wallet_validate(pubKey) && this.wallet_hasFunds(outgoingAmount, nowTime)
 
    /**
@@ -806,7 +810,7 @@ object HubContract : SmartContract() {
     * @param owner the owner of the demand
     * @param cityPairHash the ripemd160 hash of: script hash (hex) (salt) + origin city + destination city (ascii)
     */
-   private fun Demand.demand_storeAndMatch(owner: ScriptHash, cityPairHash: Hash160, nowTime: Int) {
+   private fun Demand.demand_storeAndMatch(owner: ScriptHash, cityPairHash: Hash160, nowTime: Int): Boolean {
       log_debug("CL:DBG:Demand.store")
 
       // owner state lock
@@ -880,6 +884,8 @@ object HubContract : SmartContract() {
             log_info("CL:OK:ReservedDemandValueAndFee:3")
          }
       }
+      // always a success (for now)
+      return true
    }
 
    /**
@@ -896,10 +902,9 @@ object HubContract : SmartContract() {
     * @param owner the owner of the demand
     */
    private fun Demand.demand_reserveValueAndFee(owner: ScriptHash) {
-      val toReserve = this.demand_getTotalValue().toLong()
-      val toReserveBI = BigInteger.valueOf(toReserve)  // being gentle with the compiler
+      val toReserve = this.demand_getTotalValue()
       val expiry = this.demand_getExpiry()
-      owner.wallet_reserveFunds(expiry, toReserveBI, owner)
+      owner.wallet_reserveFunds(expiry, toReserve, owner)
    }
 
    /**
@@ -911,10 +916,9 @@ object HubContract : SmartContract() {
     */
    private fun Demand.demand_reserveValueAndFee2(owner: ScriptHash, matchedTravel: Travel) {
       val expiry = this.demand_getExpiry()
-      val toReserve = this.demand_getTotalValue().toLong()
-      val toReserveBI = BigInteger.valueOf(toReserve)
+      val toReserve = this.demand_getTotalValue()
       val travellerScriptHash = matchedTravel.travel_getOwnerScriptHash()
-      owner.wallet_reserveFunds(expiry, toReserveBI, travellerScriptHash)
+      owner.wallet_reserveFunds(expiry, toReserve, travellerScriptHash)
    }
 
    /**
@@ -993,7 +997,7 @@ object HubContract : SmartContract() {
    private fun Demand.demand_getTotalValue(): BigInteger {
       // broken down like this to avoid a VM fault
       val bytes = this.range(TIMESTAMP_SIZE, VALUE_SIZE)
-      val fee = BigInteger.valueOf(FEE_DEMAND_REWARD)
+      val fee = FEE_DEMAND_REWARD as BigInteger
       val value = BigInteger(bytes)
       val total = value + fee
       return total
@@ -1422,7 +1426,7 @@ object HubContract : SmartContract() {
    private fun stats_recordRouteUsage(cityPairHash: Hash160) {
       val isRecorded = Storage.get(Storage.currentContext(), cityPairHash)
       if (isRecorded.isEmpty()) {
-         val key = STORAGE_KEY_STATS_CITIES
+         val key = STORAGE_KEY_STATS_ROUTES
          val trueBytes = byteArrayOf(1)
          val existingBytes = Storage.get(Storage.currentContext(), key)
          // don't count this city again
@@ -1464,7 +1468,7 @@ object HubContract : SmartContract() {
    /**
     * Returns the number of unique routes used over time.
     */
-   private fun stats_getRouteUsageCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_CITIES))
+   private fun stats_getRouteUsageCount() = BigInteger(Storage.get(Storage.currentContext(), STORAGE_KEY_STATS_ROUTES))
 
    /**
     * Returns the amount of funds reserved over time as a fixed8 int.

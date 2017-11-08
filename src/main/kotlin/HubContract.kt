@@ -485,8 +485,7 @@ object HubContract : SmartContract() {
     */
    private fun ScriptHash.wallet_getFundReservations(): ReservationList {
       val key = this.wallet_getFundReservationsStorageKey()
-      val reservations = Storage.get(Storage.currentContext(), key)
-      return reservations
+      return Storage.get(Storage.currentContext(), key)
    }
 
    /**
@@ -811,10 +810,8 @@ object HubContract : SmartContract() {
          // increment city usage counters (for stats)
          stats_recordCityUsage(pickUpCityHash)
          stats_recordCityUsage(dropOffCityHash)
-         log_debug("CL:DBG:UpdatedCityUsageStats", cityHashPair)
 
          stats_recordDemandCreation()
-         log_debug("CL:DBG:UpdatedDemandStats", cityHashPair)
       }
 
       // find a travel object to match this demand with
@@ -1120,7 +1117,6 @@ object HubContract : SmartContract() {
          // increment city usage counters (for stats)
          stats_recordCityUsage(pickUpCityHash)
          stats_recordCityUsage(dropOffCityHash)
-         log_debug("CL:DBG:UpdatedCityUsageStats", cityHashPair)
       }
 
       // reserve the security deposit
@@ -1380,19 +1376,21 @@ object HubContract : SmartContract() {
     */
    private fun stats_recordCityUsage(city: Hash160) {
       val isRecorded = Storage.get(Storage.currentContext(), city)
-      if (!isRecorded.isEmpty()) return
-      val key = STORAGE_KEY_STATS_CITIES
-      val trueBytes = byteArrayOf(1)
-      val existingBytes = Storage.get(Storage.currentContext(), key)
-      // don't count this city again
-      Storage.put(Storage.currentContext(), city, trueBytes)
-      if (!existingBytes.isEmpty()) {
-         val existing = BigInteger(existingBytes)
-         val plusOne = existing.toLong() + 1  // being gentle again
-         Storage.put(Storage.currentContext(), key, BigInteger.valueOf(plusOne))
-         return
+      if (isRecorded.isEmpty()) {
+         val key = STORAGE_KEY_STATS_CITIES
+         val trueBytes = byteArrayOf(1)
+         val existingBytes = Storage.get(Storage.currentContext(), key)
+         // don't count this city again
+         Storage.put(Storage.currentContext(), city, trueBytes)
+         // increment counter
+         if (!existingBytes.isEmpty()) {
+            val existing = BigInteger(existingBytes)
+            val plusOne = existing.toLong() + 1  // being gentle
+            Storage.put(Storage.currentContext(), key, BigInteger.valueOf(plusOne))
+         } else {
+            Storage.put(Storage.currentContext(), key, trueBytes)  // trueBytes == 1 as BigInteger
+         }
       }
-      Storage.put(Storage.currentContext(), key, trueBytes)  // trueBytes == 1 as BigInteger
    }
 
    /**

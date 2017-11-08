@@ -252,11 +252,13 @@ object HubContract : SmartContract() {
                return false
          }
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
+            val route = args[7]
             val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6])
-            if (demand.demand_storeAndMatch(args[0], args[7], nowTime)) {
+            if (! demand.isEmpty() &&
+                  demand.demand_storeAndMatch(args[0], route, nowTime)) {
                if (STATS_ENABLED) {  // the compiler will optimize this out if disabled
                   Runtime.notify("CL:DBG:RecordingStats")
-                  stats_recordRouteUsage(args[7])
+                  stats_recordRouteUsage(route)
                   stats_recordReservedFunds(BigInteger(args[5]))
                   stats_recordDemandCreation()
                }
@@ -268,15 +270,18 @@ object HubContract : SmartContract() {
       // Open and try to match a Travel
       if (operation === "travel_open") {
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-         if (SECURITY_ENABLED)
+         if (SECURITY_ENABLED) {
             if (! args[0].wallet_validateFunds(args[1], FEE_TRAVEL_DEPOSIT, nowTime))
                return false
+         }
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
+            val route = args[5]
             val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]))
-            if (travel.travel_storeAndMatch(args[0], args[5], nowTime)) {
+            if (! travel.isEmpty() &&
+                  travel.travel_storeAndMatch(args[0], route, nowTime)) {
                if (STATS_ENABLED) {
                   log_debug("CL:DBG:RecordingStats")
-                  stats_recordRouteUsage(args[5])
+                  stats_recordRouteUsage(route)
                   stats_recordReservedFunds(BigInteger.valueOf(FEE_TRAVEL_DEPOSIT))
                }
                return true
@@ -569,7 +574,8 @@ object HubContract : SmartContract() {
     * Increments the reputation score for the user wallet by 1.
     */
    private fun ScriptHash.wallet_incrementReputationScore() {
-      val one = BigInteger.valueOf(1)
+      val oneBytes = byteArrayOf(1)
+      val one = BigInteger(oneBytes)
       val rep = this.wallet_getReputationScore()
       val newRep = rep + one
       this.wallet_storeReputationScore(newRep)
@@ -798,7 +804,7 @@ object HubContract : SmartContract() {
       // checking individual arg lengths doesn't seem to work here
       // I tried a lot of things, grr compiler
       if (demand.size != expectedSize) {
-         Runtime.notify("CL:ERR:UnexpectedDemandSize")  // compiler woes
+         Runtime.notify("CL:ERR:UnexpectedDemandSize", demand)  // compiler woes
          return nil
       }
       return demand
@@ -1119,7 +1125,7 @@ object HubContract : SmartContract() {
       // checking individual arg lengths doesn't seem to work here
       // I tried a lot of things, grr compiler
       if (travel.size != TRAVEL_SIZE) {
-         Runtime.notify("CL:ERR:UnexpectedTravelSize")
+         Runtime.notify("CL:ERR:UnexpectedTravelSize", travel)
          return nil
       }
       return travel
@@ -1409,13 +1415,11 @@ object HubContract : SmartContract() {
    private fun stats_recordDemandCreation() {
       val key = STORAGE_KEY_STATS_DEMANDS
       val existingBytes = Storage.get(Storage.currentContext(), key)
-      if (!existingBytes.isEmpty()) {
-         var existing = BigInteger(existingBytes)
-         var plusOne = existing.toLong() + 1  // being gentle with the compiler
-         Storage.put(Storage.currentContext(), key, BigInteger.valueOf(plusOne))
-      } else {
-         Storage.put(Storage.currentContext(), key, 1 as BigInteger)
-      }
+      val existingCount = BigInteger(existingBytes)
+      val oneBytes = byteArrayOf(1)
+      val one = BigInteger(oneBytes)
+      var plusOne = existingCount + one
+      Storage.put(Storage.currentContext(), key, plusOne)
    }
 
    /**
@@ -1431,14 +1435,11 @@ object HubContract : SmartContract() {
          val existingBytes = Storage.get(Storage.currentContext(), key)
          // don't count this city again
          Storage.put(Storage.currentContext(), cityPairHash, trueBytes)
-         // increment counter
-         if (!existingBytes.isEmpty()) {
-            val existing = BigInteger(existingBytes)
-            val plusOne = existing.toLong() + 1  // being gentle
-            Storage.put(Storage.currentContext(), key, BigInteger.valueOf(plusOne))
-         } else {
-            Storage.put(Storage.currentContext(), key, trueBytes)  // trueBytes == 1 as BigInteger
-         }
+         // increment the counter
+         val existingCount = BigInteger(existingBytes)
+         val one = BigInteger(trueBytes)
+         val plusOne = existingCount + one
+         Storage.put(Storage.currentContext(), key, plusOne)
       }
    }
 
@@ -1451,13 +1452,9 @@ object HubContract : SmartContract() {
    private fun stats_recordReservedFunds(value: BigInteger) {
       val key = STORAGE_KEY_STATS_FUNDS
       val existingBytes = Storage.get(Storage.currentContext(), key)
-      if (!existingBytes.isEmpty()) {
-         val existing = BigInteger(existingBytes)
-         val plusValue = existing.toLong() + value.toLong()  // being gentle again
-         Storage.put(Storage.currentContext(), key, BigInteger.valueOf(plusValue))
-      } else {
-         Storage.put(Storage.currentContext(), key, value)
-      }
+      val existingCount = BigInteger(existingBytes)
+      val plusValue = existingCount + value
+      Storage.put(Storage.currentContext(), key, plusValue)
    }
 
    /**

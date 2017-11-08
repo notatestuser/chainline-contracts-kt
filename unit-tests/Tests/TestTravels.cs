@@ -8,11 +8,21 @@ namespace CLTests {
    public class TestTravels : Test {
       public TestTravels(ITestOutputHelper output) : base(output) { }
 
-      readonly byte[] ScriptHash = new byte[] {
+      static readonly byte[] ScriptHash = new byte[] {
          5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
          5, 4, 3, 2, 1, 5, 4, 3, 2,
          0xFF
       };
+
+      static readonly byte[] Travel = new byte[] {
+         // expiry (4 byte timestamp)
+         1, 0, 0, 0,
+         // repRequired
+         1, 0,
+         // carrySpace
+         2,
+         // owner script hash (appended)
+      }.Concat(ScriptHash).ToArray();
 
       [Fact]
       public void TestCreateTravel() {
@@ -33,18 +43,7 @@ namespace CLTests {
          }
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
-
-         var expected = new byte[] {
-            // expiry (4 byte timestamp)
-            1, 0, 0, 0,
-            // repRequired
-            1, 0,
-            // carrySpace
-            2,
-            // owner script hash (appended)
-         }.Concat(ScriptHash).ToArray();
-
-         Assert.Equal(expected, result);
+         Assert.Equal(Travel, result);
       }
 
       [Fact]
@@ -72,18 +71,8 @@ namespace CLTests {
       public void TestGetTravelCarrySpace() {
          ExecutionEngine engine = LoadContract("HubContract");
 
-         var travel = new byte[] {
-            // expiry (4 byte timestamp)
-            1, 0, 0, 0,
-            // repRequired
-            1, 0,
-            // carrySpace
-            2,
-            // owner script hash (appended)
-         }.Concat(ScriptHash).ToArray();
-
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(travel);
+            sb.EmitPush(Travel);
             sb.EmitPush(1);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_travel_getCarrySpace");  // operation
@@ -98,18 +87,8 @@ namespace CLTests {
       public void TestGetTravelOwnerScriptHash() {
          ExecutionEngine engine = LoadContract("HubContract");
 
-         var travel = new byte[] {
-            // expiry (4 byte timestamp)
-            1, 0, 0, 0,
-            // repRequired
-            1, 0,
-            // carrySpace
-            2,
-            // owner script hash (appended)
-         }.Concat(ScriptHash).ToArray();
-
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(travel);
+            sb.EmitPush(Travel);
             sb.EmitPush(1);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_travel_getOwnerScriptHash");  // operation
@@ -135,6 +114,28 @@ namespace CLTests {
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
          Assert.Equal(ScriptHash.Concat(new byte[] { 2 }).ToArray(), result);
+      }
+
+      [Fact]
+      public void TestGetTravelLookupKey() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            // input is a city pair hash160
+            sb.EmitPush(ScriptHash);
+            sb.EmitPush(Travel);
+            sb.EmitPush(2);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_travel_getLookupKey");  // operation
+            ExecuteScript(engine, sb);
+         }
+         var expected = new byte[] {
+            1, 0, 0, 0,  // nowTime
+            1, 0, 0, 0,  // expiry
+            2  // STORAGE_KEY_SUFFIX_TRAVEL
+         }.Concat(ScriptHash).ToArray();
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(expected, result);
       }
 
       [Fact]

@@ -8,19 +8,35 @@ namespace CLTests {
    public class TestDemands : Test {
       public TestDemands(ITestOutputHelper output) : base(output) { }
 
-      readonly byte[] ScriptHash = new byte[] {
+      static readonly byte[] ScriptHash = new byte[] {
          5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
          5, 4, 3, 2, 1, 5, 4, 3, 2,
          0xFF
       };
 
-      readonly byte[] Info = new byte[] {
+      static readonly byte[] Info = new byte[] {
          1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2,  // line - 32 bytes
          1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2,
          1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2,
          1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1,
          0xFF
       };
+
+      static readonly byte[] Demand = new byte[] {
+         // expiry (4 byte timestamp)
+         1, 0, 0, 0,
+         // itemValue (100000000)
+         0x00, 0xE1, 0xF5, 0x05, 0x00,
+         // owner script hash
+         5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
+         5, 4, 3, 2, 1, 5, 4, 3, 2,
+         0xFF,
+         // repRequired
+         2, 0,
+         // itemSize
+         1,
+         // info
+      }.Concat(Info).ToArray();
 
       [Fact]
       public void TestCreateDemand() {
@@ -43,24 +59,7 @@ namespace CLTests {
          }
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
-
-         var expected = new byte[] {
-            // expiry (4 byte timestamp)
-            1, 0, 0, 0,
-            // itemValue (100000000)
-            0x00, 0xE1, 0xF5, 0x05, 0x00,
-            // owner script hash
-            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
-            5, 4, 3, 2, 1, 5, 4, 3, 2,
-            0xFF,
-            // repRequired
-            2, 0,
-            // itemSize
-            1,
-            // info
-         }.Concat(Info).ToArray();
-
-         Assert.Equal(expected, result);
+         Assert.Equal(Demand, result);
       }
 
       [Fact]
@@ -113,24 +112,8 @@ namespace CLTests {
       public void TestGetDemandItemValue() {
          ExecutionEngine engine = LoadContract("HubContract");
 
-         var demand = new byte[] {
-            // expiry (4 byte timestamp)
-            1, 0, 0, 0,
-            // itemValue (100000000)
-            0x00, 0xE1, 0xF5, 0x05, 0x00,
-            // owner script hash
-            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
-            5, 4, 3, 2, 1, 5, 4, 3, 2,
-            0xFF,
-            // repRequired
-            2, 0,
-            // itemSize
-            1,
-            // info
-         }.Concat(Info).ToArray();
-
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(demand);
+            sb.EmitPush(Demand);
             sb.EmitPush(1);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_demand_getItemValue");  // operation
@@ -146,24 +129,8 @@ namespace CLTests {
       public void TestGetDemandInfoBlob() {
          ExecutionEngine engine = LoadContract("HubContract");
 
-         var demand = new byte[] {
-            // expiry (4 byte timestamp)
-            1, 0, 0, 0,
-            // itemValue (100000000)
-            0x00, 0xE1, 0xF5, 0x05, 0x00,
-            // owner script hash
-            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
-            5, 4, 3, 2, 1, 5, 4, 3, 2,
-            0xFF,
-            // repRequired
-            2, 0,
-            // itemSize
-            1,
-            // info
-         }.Concat(Info).ToArray();
-
          using (ScriptBuilder sb = new ScriptBuilder()) {
-            sb.EmitPush(demand);
+            sb.EmitPush(Demand);
             sb.EmitPush(1);
             sb.Emit(OpCode.PACK);
             sb.EmitPush("test_demand_getInfoBlob");  // operation
@@ -172,6 +139,28 @@ namespace CLTests {
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
          Assert.Equal(Info, result);
+      }
+
+      [Fact]
+      public void TestGetDemandLookupKey() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            // input is a city pair hash160
+            sb.EmitPush(ScriptHash);
+            sb.EmitPush(Demand);
+            sb.EmitPush(2);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_demand_getLookupKey");  // operation
+            ExecuteScript(engine, sb);
+         }
+         var expected = new byte[] {
+            1, 0, 0, 0,  // nowTime
+            1, 0, 0, 0,  // expiry
+            1  // STORAGE_KEY_SUFFIX_DEMAND
+         }.Concat(ScriptHash).ToArray();
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(expected, result);
       }
 
       [Fact]

@@ -113,6 +113,8 @@ object HubContract : SmartContract() {
             return args[0].demand_getItemValue()
          if (operation === "test_demand_getInfoBlob")
             return args[0].demand_getInfoBlob()
+         if (operation === "test_demand_getLookupKey")
+            return args[0].demand_getLookupKey(args[1], 1)
          if (operation === "test_demand_getStorageKey")
             return args[0].demand_getStorageKey()
          if (operation === "test_demand_findMatchableDemand")
@@ -123,6 +125,8 @@ object HubContract : SmartContract() {
             return args[0].travel_getCarrySpace()
          if (operation === "test_travel_getOwnerScriptHash")
             return args[0].travel_getOwnerScriptHash()
+         if (operation === "test_travel_getLookupKey")
+            return args[0].travel_getLookupKey(args[1], 1)
          if (operation === "test_travel_getStorageKey")
             return args[0].travel_getStorageKey()
          if (operation === "test_travel_findMatchableTravel")
@@ -807,10 +811,14 @@ object HubContract : SmartContract() {
    private fun Demand.demand_storeAndMatch(owner: ScriptHash, cityPairHash: Hash160, nowTime: Int) {
       log_debug("CL:DBG:Demand.store")
 
-      // store the demand object (state lock)
+      // owner state lock
       Storage.put(Storage.currentContext(), owner, this)
 
-      // store the demand object (cities hash key)
+      // store the demand object (lookup key)
+      val lookupKey = this.demand_getLookupKey(cityPairHash, nowTime)
+      Storage.put(Storage.currentContext(), lookupKey, this)
+
+      // store the demand object (cities hash key) for matching
       val cityPairHashKeyD = cityPairHash.demand_getStorageKey()
       val demandsForCity = Storage.get(Storage.currentContext(), cityPairHashKeyD)
       val newDemandsForCity = demandsForCity.concat(this)
@@ -1040,7 +1048,35 @@ object HubContract : SmartContract() {
    }
 
    /**
+    * Gets the key used to store the demand for tracking lookup.
+    * Tracking requires knowledge of the "identifier" and city pair.
+    *
+    * @param cityPairHash the ripemd160 hash of: script hash (hex) (salt) + origin city + destination city (ascii)
+    * @return the lookup key for use with [Storage]
+    */
+   private fun Demand.demand_getLookupKey(cityPairHash: Hash160, nowTime: Int): ByteArray {
+      val nowBigInt = nowTime as BigInteger
+      val nowBytes = nowBigInt.toByteArray(TIMESTAMP_SIZE)
+      val expiryBytes = take(this, TIMESTAMP_SIZE)
+      val suffix = byteArrayOf(STORAGE_KEY_SUFFIX_DEMAND)
+      val key = nowBytes
+         .concat(expiryBytes)
+         .concat(suffix)
+         .concat(cityPairHash)
+      return key
+   }
+
+   /**
+    * Gets the storage key to store a [Travel] match for this [Demand].
+    *
+    * @return the match key for use with [Storage]
+    */
+   private fun Demand.demand_getMatchKey() =
+      take(this, TIMESTAMP_SIZE + VALUE_SIZE + SCRIPT_HASH_SIZE)
+
+   /**
     * Gets the storage key for a [Demand], which is essentially just the city pair hash with a suffix.
+    * This is called on the city pair hash.
     *
     * @return the storage key (city pair hash + 1 byte suffix)
     */
@@ -1048,13 +1084,6 @@ object HubContract : SmartContract() {
       val demandStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_DEMAND)
       return this.concat(demandStorageKeySuffix)
    }
-
-   /**
-    * Gets the storage key to store a [Travel] match for this [Demand].
-    *
-    * @return the storage key
-    */
-   private fun Demand.demand_getMatchKey() = take(this, TIMESTAMP_SIZE + VALUE_SIZE)
 
    //endregion
 
@@ -1104,10 +1133,14 @@ object HubContract : SmartContract() {
    private fun Travel.travel_storeAndMatch(owner: ScriptHash, cityPairHash: Hash160, nowTime: Int): Boolean {
       log_debug("CL:DBG:Travel.store")
 
-      // store the travel object (state lock)
+      // owner state lock
       Storage.put(Storage.currentContext(), owner, this)
 
-      // store the travel object (cities hash key)
+      // store the travel object (lookup key)
+      val lookupKey = this.travel_getLookupKey(cityPairHash, nowTime)
+      Storage.put(Storage.currentContext(), lookupKey, this)
+
+      // store the travel object (cities hash key) for matching
       val cityPairHashKey = cityPairHash.travel_getStorageKey()
       val travelsForCityPair = Storage.get(Storage.currentContext(), cityPairHashKey)
       val newTravelsForCityPair = travelsForCityPair.concat(this)
@@ -1322,7 +1355,35 @@ object HubContract : SmartContract() {
    }
 
    /**
+    * Gets the key used to store the demand for tracking lookup.
+    * Tracking requires knowledge of the "identifier" and city pair.
+    *
+    * @param cityPairHash the ripemd160 hash of: script hash (hex) (salt) + origin city + destination city (ascii)
+    * @return the lookup key for use with [Storage]
+    */
+   private fun Travel.travel_getLookupKey(cityPairHash: Hash160, nowTime: Int): ByteArray {
+      val nowBigInt = nowTime as BigInteger
+      val nowBytes = nowBigInt.toByteArray(TIMESTAMP_SIZE)
+      val expiryBytes = take(this, TIMESTAMP_SIZE)
+      val suffix = byteArrayOf(STORAGE_KEY_SUFFIX_TRAVEL)
+      val key = nowBytes
+         .concat(expiryBytes)
+         .concat(suffix)
+         .concat(cityPairHash)
+      return key
+   }
+
+   /**
+    * Gets the storage key to store a [Demand] match for this [Travel].
+    *
+    * @return the match key for use with [Storage]
+    */
+   private fun Travel.travel_getMatchKey() =
+      take(this, TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + SCRIPT_HASH_SIZE)
+
+   /**
     * Gets the storage key for a [Travel], which is essentially just the city pair hash with a suffix.
+    * This is called on the city pair hash.
     *
     * @return the storage key (city pair hash + 1 byte suffix)
     */
@@ -1330,13 +1391,6 @@ object HubContract : SmartContract() {
       val travelStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_TRAVEL)
       return this.concat(travelStorageKeySuffix)
    }
-
-   /**
-    * Gets the storage key to store a [Demand] match for this [Travel].
-    *
-    * @return the storage key
-    */
-   private fun Travel.travel_getMatchKey() = take(this, TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE)
 
    //endregion
 

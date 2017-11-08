@@ -984,9 +984,12 @@ object HubContract : SmartContract() {
     * @return the demand's GAS value as a fixed8 int
     */
    private fun Demand.demand_getTotalValue(): BigInteger {
+      // broken down like this to avoid a VM fault
       val bytes = this.range(TIMESTAMP_SIZE, VALUE_SIZE)
       val fee = BigInteger.valueOf(FEE_DEMAND_REWARD)
-      return BigInteger(bytes) + fee
+      val value = BigInteger(bytes)
+      val total = value + fee
+      return total
    }
 
    /**

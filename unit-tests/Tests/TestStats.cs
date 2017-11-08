@@ -45,7 +45,6 @@ namespace CLTests {
 
       public void TestCityUsageStatsZero() {
          ExecutionEngine engine = LoadContract("HubContract");
-
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(0);
             sb.Emit(OpCode.PACK);
@@ -78,9 +77,30 @@ namespace CLTests {
       }
 
       [Fact]
+      public void TestCityUsageStats2NonZero() {
+         ExecutionEngine engine = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(new byte[] { 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1, 5, 4, 3, 2, 1 });
+            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 });
+            sb.EmitPush(2);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_stats_recordCityUsage2");  // operation
+            ExecuteScript(engine, sb);
+         }
+         ExecutionEngine engine2 = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(0);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("stats_getCityUsageCount");
+            ExecuteScript(engine2, sb);
+         }
+         var result = engine2.EvaluationStack.Peek().GetBigInteger();
+         Assert.Equal(2, result);
+      }
+
+      [Fact]
       public void TestReservedFundsStatsZero() {
          ExecutionEngine engine = LoadContract("HubContract");
-
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(0);
             sb.Emit(OpCode.PACK);

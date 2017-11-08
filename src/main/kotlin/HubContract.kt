@@ -128,6 +128,8 @@ object HubContract : SmartContract() {
             return stats_recordDemandCreation()
          if (operation === "test_stats_recordCityUsage")
             return stats_recordCityUsage(args[0])
+         if (operation === "test_stats_recordCityUsage2")
+            return stats_recordCityUsage2(args[0], args[1])
          if (operation === "test_stats_recordReservedFunds")
             return stats_recordReservedFunds(BigInteger(args[0]))
       }
@@ -242,7 +244,15 @@ object HubContract : SmartContract() {
                return false
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6])
-            return demand.demand_storeAndMatch(args[0], args[7], args[8], nowTime)
+            if (demand.demand_storeAndMatch(args[0], args[7], args[8], nowTime)) {
+               if (STATS_ENABLED) {  // the compiler will optimize this out if disabled
+                  log_debug("CL:DBG:RecordingStats")
+                  stats_recordDemandCreation()
+                  stats_recordCityUsage2(args[7], args[8])
+                  stats_recordReservedFunds(BigInteger(args[5]))
+               }
+               return true
+            }
          }
          return false
       }
@@ -255,7 +265,14 @@ object HubContract : SmartContract() {
                return false
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]))
-            return travel.travel_storeAndMatch(args[0], args[5], args[6], nowTime)
+            if (travel.travel_storeAndMatch(args[0], args[5], args[6], nowTime)) {
+               if (STATS_ENABLED) {
+                  log_debug("CL:DBG:RecordingStats")
+                  stats_recordCityUsage2(args[5], args[6])
+                  stats_recordReservedFunds(BigInteger.valueOf(FEE_TRAVEL_DEPOSIT))
+               }
+               return true
+            }
          }
          return false
       }
@@ -400,10 +417,6 @@ object HubContract : SmartContract() {
     * @return true on success
     */
    private fun ScriptHash.wallet_reserveFunds(expiry: BigInteger, value: BigInteger, recipient: ScriptHash) {
-      // add to accumulating stats counter
-      if (STATS_ENABLED)
-         stats_recordReservedFunds(value)
-
       // reserve the funds
       // the wallet's effective balance has already been checked in [wallet_validate]
       val reservation = reservation_create(expiry, value, recipient)
@@ -806,14 +819,6 @@ object HubContract : SmartContract() {
       Storage.put(Storage.currentContext(), cityHashPairKeyD, newDemandsForCity)
       log_info("CL:OK:StoredDemand", cityHashPair)
 
-      if (STATS_ENABLED) {
-         // increment city usage counters (for stats)
-         stats_recordCityUsage(pickUpCityHash)
-         stats_recordCityUsage(dropOffCityHash)
-
-         stats_recordDemandCreation()
-      }
-
       // find a travel object to match this demand with
       val cityHashPairKeyT = cityHashPair.travel_getStorageKey()
       val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyT)
@@ -1113,12 +1118,6 @@ object HubContract : SmartContract() {
       Storage.put(Storage.currentContext(), cityHashPairKey, newTravelsForCityPair)
       log_info("CL:OK:StoredTravel", cityHashPair)
 
-      if (STATS_ENABLED) {
-         // increment city usage counters (for stats)
-         stats_recordCityUsage(pickUpCityHash)
-         stats_recordCityUsage(dropOffCityHash)
-      }
-
       // reserve the security deposit
       // this will overwrite existing fund reservations for this wallet
       // it's here because the compiler doesn't like it being below the following block
@@ -1391,6 +1390,16 @@ object HubContract : SmartContract() {
             Storage.put(Storage.currentContext(), key, trueBytes)  // trueBytes == 1 as BigInteger
          }
       }
+   }
+
+   /**
+    * Calls [stats_recordCityUsage] for two cities.
+    *
+    * @see stats_recordCityUsage
+    */
+   private fun stats_recordCityUsage2(city1: Hash160, city2: Hash160) {
+      stats_recordCityUsage(city1)
+      stats_recordCityUsage(city2)
    }
 
    /**

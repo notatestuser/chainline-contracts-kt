@@ -121,6 +121,23 @@ namespace CLTests {
       }
 
       [Fact]
+      public void TestGetTravelStorageKey() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            // input is a city pair hash160
+            sb.EmitPush(ScriptHash);
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_travel_getStorageKey");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(ScriptHash.Concat(new byte[] { 2 }).ToArray(), result);
+      }
+
+      [Fact]
       public void TestFindMatchableTravel() {
          ExecutionEngine engine = LoadContract("HubContract");
 

@@ -175,6 +175,23 @@ namespace CLTests {
       }
 
       [Fact]
+      public void TestGetDemandStorageKey() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            // input is a city pair hash160
+            sb.EmitPush(ScriptHash);
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_demand_getStorageKey");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(ScriptHash.Concat(new byte[] { 1 }).ToArray(), result);
+      }
+
+      [Fact]
       public void TestFindMatchableDemand() {
          ExecutionEngine engine = LoadContract("HubContract");
 

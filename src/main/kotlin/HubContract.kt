@@ -18,7 +18,6 @@ typealias ScriptHash = ByteArray
 typealias PublicKey = ByteArray
 typealias Hash160 = ByteArray
 typealias Hash256 = ByteArray
-typealias Hash160Pair = ByteArray
 typealias Reservation = ByteArray
 typealias ReservationList = ByteArray
 typealias Demand = ByteArray
@@ -114,6 +113,8 @@ object HubContract : SmartContract() {
             return args[0].demand_getItemValue()
          if (operation === "test_demand_getInfoBlob")
             return args[0].demand_getInfoBlob()
+         if (operation === "test_demand_getStorageKey")
+            return args[0].demand_getStorageKey()
          if (operation === "test_demand_findMatchableDemand")
             return args[0].demands_findMatchableDemand(BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), (args[4] as Int?)!!, true)
          if (operation === "test_travel_create")
@@ -122,6 +123,8 @@ object HubContract : SmartContract() {
             return args[0].travel_getCarrySpace()
          if (operation === "test_travel_getOwnerScriptHash")
             return args[0].travel_getOwnerScriptHash()
+         if (operation === "test_travel_getStorageKey")
+            return args[0].travel_getStorageKey()
          if (operation === "test_travel_findMatchableTravel")
             return args[0].travel_findMatchableTravel(BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), (args[4] as Int?)!!, true)
          if (operation === "test_stats_recordDemandCreation")
@@ -244,7 +247,7 @@ object HubContract : SmartContract() {
                return false
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6])
-            demand.demand_storeAndMatch(args[0], args[7], args[8], nowTime)
+            demand.demand_storeAndMatch(args[0], args[7], nowTime)
             if (STATS_ENABLED) {  // the compiler will optimize this out if disabled
                log_debug("CL:DBG:RecordingStats")
                stats_recordDemandCreation()
@@ -264,7 +267,7 @@ object HubContract : SmartContract() {
                return false
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]))
-            if (travel.travel_storeAndMatch(args[0], args[5], args[6], nowTime)) {
+            if (travel.travel_storeAndMatch(args[0], args[5], nowTime)) {
                if (STATS_ENABLED) {
                   log_debug("CL:DBG:RecordingStats")
                   stats_recordCityUsage2(args[5], args[6])
@@ -799,26 +802,24 @@ object HubContract : SmartContract() {
     * Performs all the legwork necessary to store and match a [Demand] with a [Travel].
     *
     * @param owner the owner of the demand
-    * @param pickUpCityHash the ripemd160 hashed form of the pick-up city
-    * @param dropOffCityHash the ripemd160 hashed form of the drop-off city
+    * @param cityPairHash the ripemd160 hash of: script hash (hex) (salt) + origin city + destination city (ascii)
     */
-   private fun Demand.demand_storeAndMatch(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160, nowTime: Int) {
+   private fun Demand.demand_storeAndMatch(owner: ScriptHash, cityPairHash: Hash160, nowTime: Int) {
       log_debug("CL:DBG:Demand.store")
 
       // store the demand object (state lock)
       Storage.put(Storage.currentContext(), owner, this)
 
-      // store the demand object (cities key)
-      val cityHashPair = pickUpCityHash.concat(dropOffCityHash)
-      val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
-      val demandsForCity = Storage.get(Storage.currentContext(), cityHashPairKeyD)
+      // store the demand object (cities hash key)
+      val cityPairHashKeyD = cityPairHash.demand_getStorageKey()
+      val demandsForCity = Storage.get(Storage.currentContext(), cityPairHashKeyD)
       val newDemandsForCity = demandsForCity.concat(this)
-      Storage.put(Storage.currentContext(), cityHashPairKeyD, newDemandsForCity)
-      log_info2("CL:OK:StoredDemand", cityHashPair)
+      Storage.put(Storage.currentContext(), cityPairHashKeyD, newDemandsForCity)
+      log_info2("CL:OK:StoredDemand", cityPairHash)
 
       // find a travel object to match this demand with
-      val cityHashPairKeyT = cityHashPair.travel_getStorageKey()
-      val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyT)
+      val cityPairHashKeyT = cityPairHash.travel_getStorageKey()
+      val travelsForCityPair = Storage.get(Storage.currentContext(), cityPairHashKeyT)
 
       // no travels available? no match can be made yet!
       if (travelsForCityPair.isEmpty()) {
@@ -1039,14 +1040,13 @@ object HubContract : SmartContract() {
    }
 
    /**
-    * Gets the storage key for a [Demand].
+    * Gets the storage key for a [Demand], which is essentially just the city pair hash with a suffix.
     *
-    * @return the storage key
+    * @return the storage key (city pair hash + 1 byte suffix)
     */
-   private fun Hash160Pair.demand_getStorageKey(): ByteArray {
+   private fun Hash160.demand_getStorageKey(): ByteArray {
       val demandStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_DEMAND)
-      val cityHashPairKey = this.concat(demandStorageKeySuffix)
-      return cityHashPairKey
+      return this.concat(demandStorageKeySuffix)
    }
 
    /**
@@ -1098,33 +1098,30 @@ object HubContract : SmartContract() {
     * Performs all the legwork necessary to store and match a [Travel] with a [Demand].
     *
     * @param owner the traveller
-    * @param pickUpCityHash the ripemd160 hashed form of the pick-up city
-    * @param dropOffCityHash the ripemd160 hashed form of the drop-off city
+    * @param cityPairHash the ripemd160 hash of: script hash (hex) (salt) + origin city + destination city (ascii)
     * @return true on success
     */
-   private fun Travel.travel_storeAndMatch(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160, nowTime: Int): Boolean {
+   private fun Travel.travel_storeAndMatch(owner: ScriptHash, cityPairHash: Hash160, nowTime: Int): Boolean {
       log_debug("CL:DBG:Travel.store")
 
       // store the travel object (state lock)
       Storage.put(Storage.currentContext(), owner, this)
 
-      // store the travel object (cities key)
-      val cityHashPair = pickUpCityHash.concat(dropOffCityHash)
-      val cityHashPairKey = cityHashPair.travel_getStorageKey()
-      val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKey)
+      // store the travel object (cities hash key)
+      val cityPairHashKey = cityPairHash.travel_getStorageKey()
+      val travelsForCityPair = Storage.get(Storage.currentContext(), cityPairHashKey)
       val newTravelsForCityPair = travelsForCityPair.concat(this)
-      Storage.put(Storage.currentContext(), cityHashPairKey, newTravelsForCityPair)
-      log_info2("CL:OK:StoredTravel", cityHashPair)
+      Storage.put(Storage.currentContext(), cityPairHashKey, newTravelsForCityPair)
+      log_info2("CL:OK:StoredTravel", cityPairHash)
 
       // reserve the security deposit
       // this will overwrite existing fund reservations for this wallet
       // it's here because the compiler doesn't like it being below the following block
       this.travel_reserveDeposit(owner)
-      log_info2("CL:OK:ReservedTravelDeposit", cityHashPair)
 
       // find a demand object to match this travel with
-      val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
-      val demandsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKeyD)
+      val cityPairHashKeyD = cityPairHash.demand_getStorageKey()
+      val demandsForCityPair = Storage.get(Storage.currentContext(), cityPairHashKeyD)
       if (! demandsForCityPair.isEmpty()) {
          val repRequired = this.travel_getRepRequired()
          val carrySpaceAvailable = this.travel_getCarrySpace()
@@ -1325,14 +1322,13 @@ object HubContract : SmartContract() {
    }
 
    /**
-    * Gets the storage key for a [Travel].
+    * Gets the storage key for a [Travel], which is essentially just the city pair hash with a suffix.
     *
-    * @return the storage key
+    * @return the storage key (city pair hash + 1 byte suffix)
     */
-   private fun Hash160Pair.travel_getStorageKey(): ByteArray {
+   private fun Hash160.travel_getStorageKey(): ByteArray {
       val travelStorageKeySuffix = byteArrayOf(STORAGE_KEY_SUFFIX_TRAVEL)
-      val cityHashPairKey = this.concat(travelStorageKeySuffix)
-      return cityHashPairKey
+      return this.concat(travelStorageKeySuffix)
    }
 
    /**

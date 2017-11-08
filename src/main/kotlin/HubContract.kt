@@ -244,15 +244,14 @@ object HubContract : SmartContract() {
                return false
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6])
-            if (demand.demand_storeAndMatch(args[0], args[7], args[8], nowTime)) {
-               if (STATS_ENABLED) {  // the compiler will optimize this out if disabled
-                  log_debug("CL:DBG:RecordingStats")
-                  stats_recordDemandCreation()
-                  stats_recordCityUsage2(args[7], args[8])
-                  stats_recordReservedFunds(BigInteger(args[5]))
-               }
-               return true
+            demand.demand_storeAndMatch(args[0], args[7], args[8], nowTime)
+            if (STATS_ENABLED) {  // the compiler will optimize this out if disabled
+               log_debug("CL:DBG:RecordingStats")
+               stats_recordDemandCreation()
+               stats_recordCityUsage2(args[7], args[8])
+               stats_recordReservedFunds(BigInteger(args[5]))
             }
+            return true
          }
          return false
       }
@@ -274,7 +273,6 @@ object HubContract : SmartContract() {
                return true
             }
          }
-         return false
       }
 
       return false
@@ -422,7 +420,7 @@ object HubContract : SmartContract() {
       val reservation = reservation_create(expiry, value, recipient)
       this.wallet_storeFundReservations(reservation)
 
-      log_info("CL:OK:ReservedFunds", reservation)
+      log_info2("CL:OK:ReservedFunds", reservation)
    }
 
    /**
@@ -803,9 +801,8 @@ object HubContract : SmartContract() {
     * @param owner the owner of the demand
     * @param pickUpCityHash the ripemd160 hashed form of the pick-up city
     * @param dropOffCityHash the ripemd160 hashed form of the drop-off city
-    * @return true on success
     */
-   private fun Demand.demand_storeAndMatch(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160, nowTime: Int): Boolean {
+   private fun Demand.demand_storeAndMatch(owner: ScriptHash, pickUpCityHash: Hash160, dropOffCityHash: Hash160, nowTime: Int) {
       log_debug("CL:DBG:Demand.store")
 
       // store the demand object (state lock)
@@ -817,7 +814,7 @@ object HubContract : SmartContract() {
       val demandsForCity = Storage.get(Storage.currentContext(), cityHashPairKeyD)
       val newDemandsForCity = demandsForCity.concat(this)
       Storage.put(Storage.currentContext(), cityHashPairKeyD, newDemandsForCity)
-      log_info("CL:OK:StoredDemand", cityHashPair)
+      log_info2("CL:OK:StoredDemand", cityHashPair)
 
       // find a travel object to match this demand with
       val cityHashPairKeyT = cityHashPair.travel_getStorageKey()
@@ -876,8 +873,6 @@ object HubContract : SmartContract() {
             log_info("CL:OK:ReservedDemandValueAndFee:3")
          }
       }
-      // match or no match, this was a success.
-      return true
    }
 
    /**
@@ -1116,13 +1111,13 @@ object HubContract : SmartContract() {
       val travelsForCityPair = Storage.get(Storage.currentContext(), cityHashPairKey)
       val newTravelsForCityPair = travelsForCityPair.concat(this)
       Storage.put(Storage.currentContext(), cityHashPairKey, newTravelsForCityPair)
-      log_info("CL:OK:StoredTravel", cityHashPair)
+      log_info2("CL:OK:StoredTravel", cityHashPair)
 
       // reserve the security deposit
       // this will overwrite existing fund reservations for this wallet
       // it's here because the compiler doesn't like it being below the following block
       this.travel_reserveDeposit(owner)
-      log_info("CL:OK:ReservedTravelDeposit", cityHashPair)
+      log_info2("CL:OK:ReservedTravelDeposit", cityHashPair)
 
       // find a demand object to match this travel with
       val cityHashPairKeyD = cityHashPair.demand_getStorageKey()
@@ -1538,13 +1533,6 @@ object HubContract : SmartContract() {
    //region logging
 
    /**
-    * Dispatches a [Runtime.notify] with the specified args at the DEBUG level (3).
-    */
-   private fun log_debug(msg: String, arg: ByteArray) {
-      if (LOG_LEVEL > 2) Runtime.notify(msg, arg)
-   }
-
-   /**
     * Dispatches a [Runtime.notify] with the specified arg at the DEBUG level (3).
     */
    private fun log_debug(msg: String) {
@@ -1552,17 +1540,17 @@ object HubContract : SmartContract() {
    }
 
    /**
-    * Dispatches a [Runtime.notify] with the specified args at INFO level (2).
-    */
-   private fun log_info(msg: String, arg: ByteArray) {
-      if (LOG_LEVEL > 1) Runtime.notify(msg, arg)
-   }
-
-   /**
     * Dispatches a [Runtime.notify] with the specified arg at INFO level (2).
     */
    private fun log_info(msg: String) {
       if (LOG_LEVEL > 1) Runtime.notify(msg)
+   }
+
+   /**
+    * Dispatches a [Runtime.notify] with the specified args at INFO level (2).
+    */
+   private fun log_info2(msg: String, arg: ByteArray) {
+      if (LOG_LEVEL > 1) Runtime.notify(msg, arg)
    }
 
    /**

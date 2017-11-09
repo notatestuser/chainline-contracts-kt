@@ -59,8 +59,10 @@ object HubContract : SmartContract() {
    private const val FEE_TRAVEL_DEPOSIT: Long = 100000000  // 1 GAS
 
    // Storage keys
+   private const val STORAGE_KEY_SUFFIX_RESERVATIONS: Byte = 0
    private const val STORAGE_KEY_SUFFIX_DEMAND: Byte = 1
    private const val STORAGE_KEY_SUFFIX_TRAVEL: Byte = 2
+   private const val STORAGE_KEY_SUFFIX_REP: Byte = 3
    private const val STORAGE_KEY_STATS_DEMANDS = "DemandsCounter"
    private const val STORAGE_KEY_STATS_ROUTES = "RoutesCounter"
    private const val STORAGE_KEY_STATS_FUNDS = "FundsCounter"
@@ -79,8 +81,6 @@ object HubContract : SmartContract() {
     * @param args a variable length array of arguments provided to the method.
     */
    fun Main(operation: String, vararg args: ByteArray) : Any {
-      // The entry points for each of the supported operations follow
-
       //region Initialization
 
       if (operation === "initialize")
@@ -170,8 +170,14 @@ object HubContract : SmartContract() {
       //region State Getters (Read Only, Local Invoke)
 
       // Wallet
-      if (operation === "wallet_validate")
-         return args[0].wallet_validate(args[1])
+      if (operation === "wallet_getGasBalance")
+         return args[0].wallet_getGasBalance()
+      if (operation === "wallet_getReservedGasBalance") {
+         val reservations = args[0].wallet_getFundReservations()
+         if (reservations.isEmpty()) return 0
+         val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
+         return reservations.res_getTotalOnHoldGasValue(nowTime, false)
+      }
       if (operation === "wallet_requestTxOut") {
          if (args[0].wallet_validate(args[1])) {
             val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
@@ -180,34 +186,7 @@ object HubContract : SmartContract() {
          Runtime.notify("CL:ERR:InvalidWallet")
          return false
       }
-      if (operation === "wallet_getGasBalance")
-         return args[0].wallet_getGasBalance()
-      if (operation === "wallet_getReservedGasBalance") {
-         val reservations = Storage.get(Storage.currentContext(), args[0])
-         if (reservations.isEmpty()) return 0
-         val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-         return reservations.res_getTotalOnHoldGasValue(nowTime, false)
-      }
-      if (operation === "wallet_getFundReservations")
-         return args[0].wallet_getFundReservations()
-      if (operation === "wallet_setReservationPaidToRecipientTxHash") {
-         if (args[0].wallet_validate(args[1])) {
-            // if this passes the entire Chain Line transaction is complete
-            val check = args[0].wallet_setReservationPaidToRecipientTxHash(args[2], BigInteger(args[3]), args[4])
-            if (check) {
-               // reset account states, allow for new transactions
-               args[0].wallet_clearState()
-               args[2].wallet_clearState()
 
-               // increment account reputation scores
-               args[0].wallet_incrementReputationScore()
-               args[2].wallet_incrementReputationScore()
-
-               return true
-            }
-         }
-         return false
-      }
       // System State
       if (operation === "demand_isMatched")
          return args[0].demand_isMatched()
@@ -235,6 +214,9 @@ object HubContract : SmartContract() {
          val demand = Storage.get(Storage.currentContext(), matchKey)
          return demand.demand_getMatchedAtTime()
       }
+      // Used by chainline-js to generate a tracking ID on opening a demand/travel
+      if (operation === "timestamp")
+         return Blockchain.getHeader(Blockchain.height()).timestamp()
       // Generic catch-all storage getter
       if (operation === "storage_get")
          return Storage.get(Storage.currentContext(), args[0])
@@ -245,7 +227,9 @@ object HubContract : SmartContract() {
 
       // The following operations can write state; verify that the sender is who they claim they are
       if (SECURITY_ENABLED)
-         if (operation === "demand_open" || operation === "travel_open") {
+         if (operation === "demand_open" ||
+               operation === "travel_open" ||
+               operation === "wallet_setFundsPaidToRecipientTxHash") {
             val sender: ScriptHash = args[0]
             throwIfNot(Runtime.checkWitness(sender))  // kotlin workaround
             log_info("CL:OK:checkWitness")
@@ -297,8 +281,27 @@ object HubContract : SmartContract() {
          }
       }
 
-      //endregion
+      // Exchange: Demand owner refunds the Travel owner
+      if (operation === "wallet_setFundsPaidToRecipientTxHash") {
+         if (args[0].wallet_validate(args[1])) {
+            // if this passes the entire Chain Line transaction is complete
+            val check = args[0].wallet_setFundsPaidToRecipientTxHash(args[2], BigInteger(args[3]), args[4])
+            if (check) {
+               // reset account states, allow for new transactions
+               args[0].wallet_clearState()
+               args[2].wallet_clearState()
 
+               // increment account reputation scores
+               args[0].wallet_incrementReputationScore()
+               args[2].wallet_incrementReputationScore()
+
+               return true
+            }
+         }
+         return false
+      }
+
+      //endregion
       return false
    }
 
@@ -443,7 +446,6 @@ object HubContract : SmartContract() {
       // the wallet's effective balance has already been checked in [wallet_validate]
       val reservation = reservation_create(expiry, value, recipient)
       this.wallet_storeFundReservations(reservation)
-
       log_info2("CL:OK:ReservedFunds", reservation)
    }
 
@@ -459,24 +461,29 @@ object HubContract : SmartContract() {
     * @param txHash the transaction hash
     * @return true on success
     */
-   private fun ScriptHash.wallet_setReservationPaidToRecipientTxHash(recipient: ScriptHash, value: BigInteger, txHash: Hash256): Boolean {
+   private fun ScriptHash.wallet_setFundsPaidToRecipientTxHash(recipient: ScriptHash, value: BigInteger, txHash: Hash256): Boolean {
       log_debug("CL:DBG:setReservationPaidToRecipientTxHash")
-      val reservations = this.wallet_getFundReservations()
-      val matchIdx = reservations.res_findByValueAndRecipient(value, recipient)
-      if (matchIdx > -1) {
-         val matchedRes = reservations.res_getAt(matchIdx)
-         val stored = Storage.get(Storage.currentContext(), matchedRes)
-         if (stored.isEmpty()) {
-            val tx = Blockchain.getTransaction(txHash)
-            val outputs = tx!!.outputs()
-            var txValue: Long = 0
-            outputs.forEach {
-               if (it.scriptHash() === recipient)
-                  txValue += it.value()
-            }
-            if (txValue >= value.toLong()) {
-               Storage.put(Storage.currentContext(), matchedRes, txHash)
-               return true
+      // in most cases a Reservation is created with its owner's script hash set as the recipient.
+      // this is merely its starting state and we shouldn't allow the user to actually perform an exchange with themselves.
+      if (recipient !== this) {
+         val reservations = this.wallet_getFundReservations()
+         val matchIdx = reservations.res_findByValueAndRecipient(value, recipient)
+         if (matchIdx > -1) {
+            val matchedRes = reservations.res_getAt(matchIdx)
+            val stored = Storage.get(Storage.currentContext(), matchedRes)
+            if (stored.isEmpty()) {
+               val tx = Blockchain.getTransaction(txHash)
+               val outputs = tx!!.outputs()
+               var txValue: Long = 0
+               outputs.forEach {
+                  if (it.scriptHash() === recipient)
+                     txValue += it.value()
+               }
+               if (txValue >= value.toLong()) {
+                  Storage.put(Storage.currentContext(), matchedRes, txHash)
+                  return true
+               }
+               return false
             }
             return false
          }
@@ -553,7 +560,7 @@ object HubContract : SmartContract() {
     * Gets the storage key used to store/lookup [reserved funds][ReservationList] for a wallet.
     */
    private fun ScriptHash.wallet_getFundReservationsStorageKey(): ByteArray {
-      val suffix = byteArrayOf(0)
+      val suffix = byteArrayOf(STORAGE_KEY_SUFFIX_RESERVATIONS)
       val combined = this.concat(suffix)
       return combined
    }
@@ -595,7 +602,7 @@ object HubContract : SmartContract() {
     * Gets the storage key used to store/lookup user reputation for a wallet.
     */
    private fun ScriptHash.wallet_getReputationStorageKey(): ByteArray {
-      val suffix = byteArrayOf(1)
+      val suffix = byteArrayOf(STORAGE_KEY_SUFFIX_REP)
       val combined = this.concat(suffix)
       return combined
    }
@@ -881,18 +888,17 @@ object HubContract : SmartContract() {
             Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
             log_info("CL:OK:MatchedTravelWithDemand")
 
+            // switch the travel's existing expiry to a new time after the expiry of the demand
+            val newExpiry = demandExpiry + TRAVEL_EXTRA_EXPIRY_ON_MATCH as BigInteger
+            val traveller = matchedTravel.travel_getOwnerScriptHash()
+            matchedTravel.travel_overwriteExpiry(traveller, newExpiry)
+            log_debug("CL:OK:UpdatedTravelExpiry")
+
             // reserve the item's value and fee
             // this will overwrite existing fund reservations for this wallet
             // since we found a matchable travel we can set the recipient's script hash in the reservation (matchedTravel)
             this.demand_reserveValueAndFee2(owner, matchedTravel)
-            log_info("CL:OK:ReservedDemandValue")
-
-            // switch the travel's existing expiry to a new time after the expiry of the demand
-            val traveller = matchedTravel.travel_getOwnerScriptHash()
-            val extraExpiry = BigInteger.valueOf(TRAVEL_EXTRA_EXPIRY_ON_MATCH)
-            val newExpiry = demandExpiry + extraExpiry
-            matchedTravel.travel_overwriteExpiry(traveller, newExpiry)
-            log_info("CL:OK:ReservedDemandValueAndFee:3")
+            log_debug("CL:OK:ReservedDemandValueAndFee:3")
          }
       }
       // always a success (for now)
@@ -1192,10 +1198,9 @@ object HubContract : SmartContract() {
 
             // switch the traveller's existing deposit reservation to one that expires after the demand
             // unfortunately this line must be here due to compiler troubles with anything more complex
-            val extraExpiry = BigInteger.valueOf(TRAVEL_EXTRA_EXPIRY_ON_MATCH)
-            val newExpiry = matchedDemand.demand_getExpiry() + extraExpiry
+            val newExpiry = matchedDemand.demand_getExpiry() + TRAVEL_EXTRA_EXPIRY_ON_MATCH as BigInteger
             this.travel_overwriteExpiry(owner, newExpiry)
-            log_info("CL:OK:UpdatedTravelExpiry")
+            log_debug("CL:OK:UpdatedTravelExpiry")
 
             // overwrite the reservation that was created with the matched demand
             // this means that we inject the traveller's script hash as the "recipient" of the reserved funds
@@ -1207,7 +1212,7 @@ object HubContract : SmartContract() {
             if (reservationAtIdx > 0) {
                val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
                demandOwner.wallet_storeFundReservations(rewrittenReservationList)
-               log_info("CL:OK:RewroteDemandFundsReservation")
+               log_debug("CL:OK:UpdatedDemandFundsReservation")
 
             } else {
                // the reservation could not be found!
@@ -1260,7 +1265,9 @@ object HubContract : SmartContract() {
     * @param expiry the new expiry time
     */
    private fun Travel.travel_overwriteExpiry(owner: ScriptHash, expiry: BigInteger) {
-      owner.wallet_reserveFunds(expiry, BigInteger.valueOf(FEE_TRAVEL_DEPOSIT), owner)
+      // re-reserve the funds
+      val deposit = BigInteger.valueOf(FEE_TRAVEL_DEPOSIT)
+      owner.wallet_reserveFunds(expiry, deposit, owner)
 
       // overwrite the expiry in the traveller's "state lock" object too
       val expiryBytes = expiry.toByteArray(TIMESTAMP_SIZE)
@@ -1432,7 +1439,7 @@ object HubContract : SmartContract() {
     *
     * @see stats_getRouteUsageCount
     */
-   private fun stats_recordRouteUsage(cityPairHash: Hash160) {
+   private fun stats_recordRouteUsage(cityPairHash: Hash160): Boolean {
       val isRecorded = Storage.get(Storage.currentContext(), cityPairHash)
       if (isRecorded.isEmpty()) {
          val key = STORAGE_KEY_STATS_ROUTES
@@ -1445,7 +1452,9 @@ object HubContract : SmartContract() {
          val one = BigInteger(trueBytes)
          val plusOne = existingCount + one
          Storage.put(Storage.currentContext(), key, plusOne)
+         return true
       }
+      return false
    }
 
    /**

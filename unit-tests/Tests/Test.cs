@@ -22,10 +22,10 @@ namespace CLTests {
          return engine;
       }
 
-      protected void ExecuteScript(ExecutionEngine engine, ScriptBuilder sb) {
+      protected void ExecuteScript(ExecutionEngine engine, ScriptBuilder sb, bool throwOnFault = false) {
          engine.LoadScript(sb.ToArray());
          engine.Execute();
-         VMHelper.AssertNoFaultState(engine, Output);
+         VMHelper.AssertNoFaultState(engine, Output, throwOnFault);
       }
    }
 }

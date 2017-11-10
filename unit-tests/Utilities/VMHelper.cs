@@ -5,8 +5,12 @@ using Xunit.Abstractions;
 
 namespace CLTests.Utilities {
    public class VMHelper {
-      public static void AssertNoFaultState(ExecutionEngine engine, ITestOutputHelper output) {
+      public static void AssertNoFaultState(ExecutionEngine engine, ITestOutputHelper output, bool throwOnFault) {
          bool hasFaulted = engine.State == VMState.FAULT;
+
+         if (throwOnFault && hasFaulted)
+            throw new Exception("VM is in a FAULT state!");
+
          if (!hasFaulted) return;
 
          // uncomment these lines when the custom neo-vm is loaded for extra logging.
@@ -26,6 +30,9 @@ namespace CLTests.Utilities {
                output.WriteLine(BitConverter.ToString(item.GetByteArray()));
             } catch (Exception) { }
          }
+
+         if (throwOnFault && hasFaulted)
+            throw new Exception("VM is in a FAULT state!");
 
          Assert.False(hasFaulted, "FAULT");
       }

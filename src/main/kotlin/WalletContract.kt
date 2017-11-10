@@ -37,7 +37,7 @@ object WalletContract : SmartContract() {
       // verify the signature against the wallet owner's pubkey
       // this is used because the InteropInterface VM type cannot be consumed via GetByteArray() (https://git.io/vFcJf)
       // unfortunately that is what !call() previously made the VM do here (it becomes IFNE -> NUMNOTEQUAL, then FAULT)
-      throwIfNot(verifySignature(signature, ownerPubKey))
+      vm_throwIfNot(verifySignature(signature, ownerPubKey))
 
       // ensure that we are processing a withdrawal
       // todo: causes a FAULT for now, not a big deal
@@ -75,5 +75,5 @@ object WalletContract : SmartContract() {
     * Aborts execution if the supplied [arg] is not true.
     */
    @OpCode(org.neo.vm._OpCode.THROWIFNOT)
-   private external fun throwIfNot(arg: Any)
+   private external fun vm_throwIfNot(arg: Any)
 }

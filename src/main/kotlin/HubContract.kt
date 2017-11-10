@@ -30,8 +30,8 @@ object HubContract : SmartContract() {
    // Config
    private const val LOG_LEVEL = 3  // 1: errors, 2: info/warn, 3: debug
    private const val TESTS_ENABLED = true
-   private const val STATS_ENABLED = true
-   private const val SECURITY_ENABLED = false  // enables checkWitness and wallet validation
+   private const val STATS_ENABLED = true  // enables stats recording and getters
+   private const val SECURITY_ENABLED = false  // enables checkWitness and wallet checks
 
    // Byte array sizes
    private const val VALUE_SIZE = 5
@@ -226,14 +226,15 @@ object HubContract : SmartContract() {
       //region State Mutators (Blockchain Invokes)
 
       // The following operations can write state; verify that the sender is who they claim they are
-      if (SECURITY_ENABLED)
+      if (SECURITY_ENABLED) {
          if (operation === "demand_open" ||
                operation === "travel_open" ||
                operation === "wallet_setFundsPaidToRecipientTxHash") {
             val sender: ScriptHash = args[0]
-            throwIfNot(Runtime.checkWitness(sender))  // kotlin workaround
+            vm_throwIfNot(Runtime.checkWitness(sender))  // kotlin workaround
             log_info("CL:OK:checkWitness")
          }
+      }
 
       // Open and try to match a Demand
       if (operation === "demand_open") {
@@ -623,10 +624,21 @@ object HubContract : SmartContract() {
     * @return the [reserved funds object][Reservation]
     */
    private fun reservation_create(expiry: BigInteger, value: BigInteger, recipient: ScriptHash): Reservation {
-      // size: 30 bytes
+      val nil = byteArrayOf()
+      if (value.toLong() > MAX_GAS_TX_VALUE)
+         return nil
+      // size: 29 bytes
+      val expectedSize = RESERVATION_SIZE
       val reservation = expiry.toByteArray(TIMESTAMP_SIZE)
-            .concat(value.toByteArray(VALUE_SIZE))
-            .concat(recipient)  // script hash, 20 bytes
+         .concat(value.toByteArray(VALUE_SIZE))
+         .concat(recipient)  // script hash, 20 bytes
+      // checking individual arg lengths doesn't seem to work here
+      // I tried a lot of things, grr compiler
+      if (reservation.size != expectedSize) {
+         Runtime.notify("CL:ERR:UnexpectedReservationSize", reservation)  // compiler woes
+         vm_throw()  // abort here
+         return nil
+      }
       return reservation
    }
 
@@ -1271,9 +1283,15 @@ object HubContract : SmartContract() {
 
       // overwrite the expiry in the traveller's "state lock" object too
       val expiryBytes = expiry.toByteArray(TIMESTAMP_SIZE)
-      val travelRemainder = range(this, TIMESTAMP_SIZE, TRAVEL_SIZE - TIMESTAMP_SIZE)
-      val newTravel = expiryBytes.concat(travelRemainder)
-      Storage.put(Storage.currentContext(), owner, newTravel)
+      if (expiryBytes.size === TIMESTAMP_SIZE) {
+         val travelRemainder = range(this, TIMESTAMP_SIZE, TRAVEL_SIZE - TIMESTAMP_SIZE)
+         val newTravel = expiryBytes.concat(travelRemainder)
+         Storage.put(Storage.currentContext(), owner, newTravel)
+      } else {
+         // we'll end up here if the expiry timestamp is too large to fit in a 4 byte int.
+         // it's ok to proceed. the system's state is still fine. the user is just trying to mess with us anyway.
+         Runtime.notify("CL:ERR:NewTimestampSize", expiryBytes.size as ByteArray)
+      }
    }
 
    /**
@@ -1635,11 +1653,18 @@ object HubContract : SmartContract() {
    private external fun getBalance(account: Account, asset_id: ByteArray): Long
 
    /**
+    * Inserts the "THROW" OpCode.
+    * Aborts execution.
+    */
+   @OpCode(org.neo.vm._OpCode.THROW)
+   private external fun vm_throw()
+
+   /**
     * Inserts the "THROWIFNOT" OpCode.
     * Aborts execution if the supplied [arg] is not true.
     */
    @OpCode(org.neo.vm._OpCode.THROWIFNOT)
-   private external fun throwIfNot(arg: Any)
+   private external fun vm_throwIfNot(arg: Any)
 
    //endregion
 }

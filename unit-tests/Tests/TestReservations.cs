@@ -13,7 +13,7 @@ namespace CLTests {
 
          using (ScriptBuilder sb = new ScriptBuilder()) {
             sb.EmitPush(new byte[] { 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 });  // args[2]
-            sb.EmitPush(2147483647);   // args[1] - value
+            sb.EmitPush(2147483647);  // args[1] - value
             sb.EmitPush(2147483647);  // args[0] - timestamp
             sb.EmitPush(3);
             sb.Emit(OpCode.PACK);
@@ -28,6 +28,23 @@ namespace CLTests {
             0xFF, 0xFF, 0xFF, 0x7F, 0,  // value is 5 bytes
             1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5,
          }, result);
+      }
+
+      [Fact]
+      public void TestCreateReservationValidation() {
+         ExecutionEngine engine = LoadContract("HubContract");
+
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(new byte[] { 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5, 1, 2, 3, 4, 5 });  // args[2]
+            sb.EmitPush(2147483647);  // args[1] - value
+            sb.EmitPush(2147483648);  // args[0] - timestamp (too big to fit in an int!)
+            sb.EmitPush(3);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_reservation_create");  // operation
+
+            // ExecuteScript will throw if the VM is in FAULT state
+            Assert.Throws<Exception>(() => ExecuteScript(engine, sb, true));
+         }
       }
 
       [Fact]

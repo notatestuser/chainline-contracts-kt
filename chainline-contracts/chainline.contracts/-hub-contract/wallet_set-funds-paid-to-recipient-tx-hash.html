@@ -1,0 +1,27 @@
+<HTML>
+<HEAD>
+<meta charset="UTF-8">
+<title>HubContract.wallet_setFundsPaidToRecipientTxHash - chainline-contracts</title>
+<link rel="stylesheet" href="../../../style.css">
+</HEAD>
+<BODY>
+<a href="../../index.html">chainline-contracts</a>&nbsp;/&nbsp;<a href="../index.html">chainline.contracts</a>&nbsp;/&nbsp;<a href="index.html">HubContract</a>&nbsp;/&nbsp;<a href=".">wallet_setFundsPaidToRecipientTxHash</a><br/>
+<br/>
+<h1>wallet_setFundsPaidToRecipientTxHash</h1>
+<a name="chainline.contracts.HubContract$wallet_setFundsPaidToRecipientTxHash(kotlin.ByteArray, kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)"></a>
+<code><span class="keyword">private</span> <span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_setFundsPaidToRecipientTxHash</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_setFundsPaidToRecipientTxHash(kotlin.ByteArray, kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)/recipient">recipient</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_setFundsPaidToRecipientTxHash(kotlin.ByteArray, kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)/value">value</span><span class="symbol">:</span>&nbsp;<span class="identifier">BigInteger</span><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_setFundsPaidToRecipientTxHash(kotlin.ByteArray, kotlin.ByteArray, java.math.BigInteger, kotlin.ByteArray)/txHash">txHash</span><span class="symbol">:</span>&nbsp;<a href="../-hash256.html"><span class="identifier">Hash256</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code> <a href="http://github.com/notatestuser/chainline-contracts-kt/HubContract.kt#L465">(source)</a>
+<p>Sets the transaction hash of funds that have been transferred to the recipient of <a href="../-reservation-list.html">reserved funds</a>.</p>
+<p>Because we can't access storage in a verify script, we have to use an invoke to set the tx hash.
+This function finds the given transaction and makes sure the supplied value went to the recipient.
+If the transaction or reserved funds cannot be found this method will fail and return false.</p>
+<h3>Parameters</h3>
+<p><a name="recipient"></a>
+<code>recipient</code> - the recipient of the reserved funds</p>
+<p><a name="value"></a>
+<code>value</code> - the GAS value of the reserved funds as a fixed8 int</p>
+<p><a name="txHash"></a>
+<code>txHash</code> - the transaction hash</p>
+<p><strong>Return</strong><br/>
+true on success</p>
+</BODY>
+</HTML>

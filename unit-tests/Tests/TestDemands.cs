@@ -196,7 +196,7 @@ namespace CLTests {
       }
 
       [Fact]
-      public void TestFindMatchableDemand() {
+      public void TestFindMatchableDemandPass() {
          ExecutionEngine engine = LoadContract("HubContract");
 
          var nowTime = 101;
@@ -267,6 +267,185 @@ namespace CLTests {
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
          Assert.Equal(demand3, result);
+      }
+
+      [Fact]
+      public void TestFindMatchableDemandWhenFirstIsMatched() {
+         var nowTime = 101;
+         byte[] expiredExpiry = BitConverter.GetBytes(100).ToArray();
+         byte[] futureExpiry = BitConverter.GetBytes(102).ToArray();
+
+         // demand1 - suitable but matched :(
+         var demand1 = futureExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // itemValue (100000000)
+            0x00, 0xE1, 0xF5, 0x05, 0x00,
+            // owner script hash
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2,
+            0xFF,
+            // repRequired
+            1, 0,
+            // itemSize
+            1
+            // info
+         }).Concat(Info).ToArray();
+
+         var demand1MatchKey = futureExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // itemValue (100000000)
+            0x00, 0xE1, 0xF5, 0x05, 0x00,
+            // owner script hash
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2,
+            0xFF,
+         }).ToArray();
+
+         // demand2 - suitable, unmatched
+         var demand2 = futureExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // itemValue (100000000), slightly different to demand1 above
+            0x01, 0xE1, 0xF5, 0x05, 0x00,
+            // owner script hash
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2,
+            0xFF,
+            // repRequired
+            1, 0,
+            // itemSize
+            1
+            // info
+         }).Concat(Info).ToArray();
+
+         ExecutionEngine engine1 = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(new byte[] { 1 });  // args[1] - value
+            sb.EmitPush(demand1MatchKey);  // args[0] - key
+            sb.EmitPush(2);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_storage_put");  // operation
+            ExecuteScript(engine1, sb);
+         }
+
+         ExecutionEngine engine2 = LoadContract("HubContract");
+         var demands = demand1.Concat(demand2).ToArray();
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(nowTime);  // args[4] - nowTime
+            sb.EmitPush(100);  // args[3] - expiresAfter
+            sb.EmitPush(1);  // args[2] - carrySpace
+            sb.EmitPush(0);  // args[1] - repRequired
+            sb.EmitPush(demands);  // args[0]
+            sb.EmitPush(5);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_demand_findMatchableDemand");  // operation
+            ExecuteScript(engine2, sb);
+         }
+
+         var result = engine2.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(demand2, result);
+      }
+
+      [Fact]
+      public void TestFindMatchableDemandUserRepCheckPass() {
+         var nowTime = 101;
+         byte[] expiredExpiry = BitConverter.GetBytes(100).ToArray();
+         byte[] futureExpiry = BitConverter.GetBytes(102).ToArray();
+
+         // demand - suitable
+         var demand = futureExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // itemValue (100000000)
+            0x00, 0xE1, 0xF5, 0x05, 0x00,
+            // owner script hash
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2,
+            0xFD,
+            // repRequired
+            1, 0,
+            // itemSize
+            1
+            // info
+         }).Concat(Info).ToArray();
+
+         // the demand owner's script hash - to get some reputation below
+         var ownerScriptHash = new byte[] {
+            // owner script hash
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2,
+            0xFD,
+         };
+
+         ExecutionEngine engine1 = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(ownerScriptHash);  // args[0]
+            sb.EmitPush(1);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_wallet_incrementReputationScore");  // operation
+            ExecuteScript(engine1, sb);
+         }
+
+         ExecutionEngine engine2 = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(nowTime);  // args[4] - nowTime
+            sb.EmitPush(100);  // args[3] - expiresAfter
+            sb.EmitPush(1);  // args[2] - carrySpace
+            sb.EmitPush(1);  // args[1] - repRequired
+            sb.EmitPush(demand);  // args[0]
+            sb.EmitPush(5);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_demand_findMatchableDemand");  // operation
+            ExecuteScript(engine2, sb);
+         }
+
+         var result = engine2.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(demand, result);
+      }
+
+      [Fact]
+      public void TestFindMatchableDemandUserRepCheckFail() {
+         var nowTime = 101;
+         byte[] expiredExpiry = BitConverter.GetBytes(100).ToArray();
+         byte[] futureExpiry = BitConverter.GetBytes(102).ToArray();
+
+         // demand - suitable
+         var demand = futureExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // itemValue (100000000)
+            0x00, 0xE1, 0xF5, 0x05, 0x00,
+            // owner script hash
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2,
+            0xFE,
+            // repRequired
+            1, 0,
+            // itemSize
+            1
+            // info
+         }).Concat(Info).ToArray();
+
+         // the demand owner's script hash - starts out with no reputation
+         var ownerScriptHash = new byte[] {
+            // owner script hash
+            5, 4, 3, 2, 1, 5, 4, 3, 2, 1,  // line - 10 bytes
+            5, 4, 3, 2, 1, 5, 4, 3, 2,
+            0xFE,
+         };
+
+         ExecutionEngine engine = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(nowTime);  // args[4] - nowTime
+            sb.EmitPush(100);  // args[3] - expiresAfter
+            sb.EmitPush(1);  // args[2] - carrySpace
+            sb.EmitPush(1);  // args[1] - repRequired
+            sb.EmitPush(demand);  // args[0]
+            sb.EmitPush(5);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_demand_findMatchableDemand");  // operation
+            ExecuteScript(engine, sb);
+         }
+
+         var result = engine.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(new byte[] {}, result);
       }
 
       [Fact]

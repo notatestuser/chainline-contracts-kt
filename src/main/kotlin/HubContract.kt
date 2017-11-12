@@ -29,7 +29,7 @@ object HubContract : SmartContract() {
 
    // Config
    private const val LOG_LEVEL = 3  // 1: errors, 2: info/warn, 3: debug
-   private const val TESTS_ENABLED = true
+   private const val TESTS_ENABLED = true  // important! disable this for live deployments!
    private const val STATS_ENABLED = true  // enables stats recording and getters
    private const val SECURITY_ENABLED = false  // enables checkWitness and wallet checks
 
@@ -50,13 +50,14 @@ object HubContract : SmartContract() {
    private const val TRAVEL_SIZE =
          TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + SCRIPT_HASH_SIZE
 
-   // Maximum values
-   // the maximum value of a transaction is fixed at ~5497 GAS so that we can fit it into 5 bytes.
-   private const val MAX_GAS_TX_VALUE = 549750000000 // approx. (2^40)/2 = 5497.5 GAS
-
    // Fees
-   private const val FEE_DEMAND_REWARD: Long = 300000000   // 3 GAS
+   private const val FEE_DEMAND_REWARD:  Long = 300000000  // 3 GAS
    private const val FEE_TRAVEL_DEPOSIT: Long = 100000000  // 1 GAS
+
+   // Item value limits
+   // the maximum value of a transaction is fixed at ~5497 GAS so that we can fit it into 5 bytes.
+   private const val MAX_GAS_ITEM_VALUE: Long = 549750000000 - FEE_DEMAND_REWARD  // (2^40)/2 = 5497.5 GAS
+   private const val MIN_GAS_ITEM_VALUE: Long = 50000000  // 0.5 GAS
 
    // Storage keys
    private const val STORAGE_KEY_SUFFIX_RESERVATIONS: Byte = 0
@@ -93,8 +94,12 @@ object HubContract : SmartContract() {
       //region Test Entry Points
 
       if (TESTS_ENABLED) {
+         if (operation === "test_storage_put")
+            return Storage.put(Storage.currentContext(), args[0], args[1])
          if (operation === "test_initialize_getP1")
             return getWalletScriptP1()
+         if (operation === "test_wallet_incrementReputationScore")
+            return args[0].wallet_incrementReputationScore()
          if (operation === "test_reservation_create")
             return reservation_create(BigInteger(args[0]), BigInteger(args[1]), args[2])
          if (operation === "test_reservation_getExpiry")
@@ -104,7 +109,7 @@ object HubContract : SmartContract() {
          if (operation === "test_reservation_getRecipient")
             return args[0].res_getRecipient()
          if (operation === "test_reservations_getReservedGasBalance")
-            return args[0].res_getTotalOnHoldGasValue(1, true)
+            return args[0].res_getTotalOnHoldGasValue(1)
          if (operation === "test_reservations_findByValue")
             return args[0].res_findByValue(BigInteger(args[1]))
          if (operation === "test_reservations_findByValueAndRecipient")
@@ -112,7 +117,7 @@ object HubContract : SmartContract() {
          if (operation === "test_reservations_replaceRecipientAt")
             return args[0].res_replaceRecipientAt((args[1] as Int?)!!, args[2])
          if (operation === "test_demand_create")
-            return demand_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), args[5])
+            return demand_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), args[5], 1)
          if (operation === "test_demand_getItemValue")
             return args[0].demand_getItemValue()
          if (operation === "test_demand_getTotalValue")
@@ -124,9 +129,9 @@ object HubContract : SmartContract() {
          if (operation === "test_demand_getStorageKey")
             return args[0].demand_getStorageKey()
          if (operation === "test_demand_findMatchableDemand")
-            return args[0].demands_findMatchableDemand(BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), (args[4] as Int?)!!, true)
+            return args[0].demands_findMatchableDemand(BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), (args[4] as Int?)!!)
          if (operation === "test_travel_create")
-            return travel_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]))
+            return travel_create(args[0], BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), 1)
          if (operation === "test_travel_getCarrySpace")
             return args[0].travel_getCarrySpace()
          if (operation === "test_travel_getOwnerScriptHash")
@@ -136,7 +141,7 @@ object HubContract : SmartContract() {
          if (operation === "test_travel_getStorageKey")
             return args[0].travel_getStorageKey()
          if (operation === "test_travel_findMatchableTravel")
-            return args[0].travel_findMatchableTravel(BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), (args[4] as Int?)!!, true)
+            return args[0].travels_findMatchableTravel(BigInteger(args[1]), BigInteger(args[2]), BigInteger(args[3]), (args[4] as Int?)!!)
          if (operation === "test_stats_recordDemandCreation")
             return stats_recordDemandCreation()
          if (operation === "test_stats_recordRouteUsage")
@@ -158,7 +163,6 @@ object HubContract : SmartContract() {
          if (operation === "stats_getUserReputationScore")
             return args[0].wallet_getReputationScore()
       }
-
       //endregion
 
       // IsInitialized() - Compiler doesn't like that call being here
@@ -176,7 +180,7 @@ object HubContract : SmartContract() {
          val reservations = args[0].wallet_getFundReservations()
          if (reservations.isEmpty()) return 0
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-         return reservations.res_getTotalOnHoldGasValue(nowTime, false)
+         return reservations.res_getTotalOnHoldGasValue(nowTime)
       }
       if (operation === "wallet_requestTxOut") {
          if (args[0].wallet_validate(args[1])) {
@@ -220,7 +224,6 @@ object HubContract : SmartContract() {
       // Generic catch-all storage getter
       if (operation === "storage_get")
          return Storage.get(Storage.currentContext(), args[0])
-
       //endregion
 
       //region State Mutators (Blockchain Invokes)
@@ -246,7 +249,7 @@ object HubContract : SmartContract() {
          }
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val route = args[7]
-            val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6])
+            val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6], nowTime)
             if (! demand.isEmpty() &&
                   demand.demand_storeAndMatch(args[0], route, nowTime)) {
                if (STATS_ENABLED) {  // the compiler will optimize this out if disabled
@@ -257,6 +260,7 @@ object HubContract : SmartContract() {
                }
                return true
             }
+            Runtime.notify("CL:ERR:DemandValidationError")
          }
       }
 
@@ -269,7 +273,7 @@ object HubContract : SmartContract() {
          }
          if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val route = args[5]
-            val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]))
+            val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), nowTime)
             if (! travel.isEmpty() &&
                   travel.travel_storeAndMatch(args[0], route, nowTime)) {
                if (STATS_ENABLED) {
@@ -279,30 +283,32 @@ object HubContract : SmartContract() {
                }
                return true
             }
+            Runtime.notify("CL:ERR:TravelValidationError")
          }
       }
 
       // Exchange: Demand owner refunds the Travel owner
       if (operation === "wallet_setFundsPaidToRecipientTxHash") {
-         if (args[0].wallet_validate(args[1])) {
-            // if this passes the entire Chain Line transaction is complete
-            val check = args[0].wallet_setFundsPaidToRecipientTxHash(args[2], BigInteger(args[3]), args[4])
-            if (check) {
-               // reset account states, allow for new transactions
-               args[0].wallet_clearState()
-               args[2].wallet_clearState()
+         if (SECURITY_ENABLED) {
+            if (! args[0].wallet_validate(args[1]))
+               return false
+         }
+         // if true the entire Chain Line transaction is complete
+         if (args[0].wallet_setFundsPaidToRecipientTxHash(args[2], BigInteger(args[3]), args[4])) {
+            // reset account states, allow for new transactions
+            args[0].wallet_clearState()
+            args[2].wallet_clearState()
 
-               // increment account reputation scores
-               args[0].wallet_incrementReputationScore()
-               args[2].wallet_incrementReputationScore()
+            // increment account reputation scores
+            args[0].wallet_incrementReputationScore()
+            args[2].wallet_incrementReputationScore()
 
-               return true
-            }
+            return true
          }
          return false
       }
-
       //endregion
+
       return false
    }
 
@@ -421,7 +427,7 @@ object HubContract : SmartContract() {
       val balance = this.wallet_getGasBalance()
       if (balance >= amount) {
          val reservations = this.wallet_getFundReservations()
-         val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime, false)
+         val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
          val effectiveBalance = balance - gasOnHold
          if (effectiveBalance >= amount)
             return true
@@ -466,7 +472,8 @@ object HubContract : SmartContract() {
       log_debug("CL:DBG:setReservationPaidToRecipientTxHash")
       // in most cases a Reservation is created with its owner's script hash set as the recipient.
       // this is merely its starting state and we shouldn't allow the user to actually perform an exchange with themselves.
-      if (recipient !== this) {
+      if (recipient !== this &&
+            Storage.get(Storage.currentContext(), txHash).isEmpty()) {  // tx consumed?
          val reservations = this.wallet_getFundReservations()
          val matchIdx = reservations.res_findByValueAndRecipient(value, recipient)
          if (matchIdx > -1) {
@@ -482,6 +489,7 @@ object HubContract : SmartContract() {
                }
                if (txValue >= value.toLong()) {
                   Storage.put(Storage.currentContext(), matchedRes, txHash)
+                  Storage.put(Storage.currentContext(), txHash, matchedRes)  // "consume" the tx
                   return true
                }
                return false
@@ -505,7 +513,7 @@ object HubContract : SmartContract() {
 
       // check fund reservations
       val reservations = this.wallet_getFundReservations()
-      val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime, false)
+      val gasOnHold = reservations.res_getTotalOnHoldGasValue(nowTime)
       if (gasOnHold > 0)
          return false
 
@@ -625,7 +633,7 @@ object HubContract : SmartContract() {
     */
    private fun reservation_create(expiry: BigInteger, value: BigInteger, recipient: ScriptHash): Reservation {
       val nil = byteArrayOf()
-      if (value.toLong() > MAX_GAS_TX_VALUE)
+      if (value.toLong() > MAX_GAS_ITEM_VALUE)
          return nil
       // size: 29 bytes
       val expectedSize = RESERVATION_SIZE
@@ -724,7 +732,7 @@ object HubContract : SmartContract() {
     * @param assumeUnpaid skips a call to storage, used in testing
     * @return the total value of GAS that is reserved
     */
-   private fun ReservationList.res_getTotalOnHoldGasValue(nowTime: Int, assumeUnpaid: Boolean): Long {
+   private fun ReservationList.res_getTotalOnHoldGasValue(nowTime: Int): Long {
       // todo: clean up expired reservation entries
       if (this.isEmpty())
          return 0
@@ -733,7 +741,7 @@ object HubContract : SmartContract() {
       var total: Long = 0
       while (i < count) {
          val reservation = this.res_getAt(i)
-         if (assumeUnpaid || ! reservation.res_wasPaidToRecipient()) {
+         if ( ! reservation.res_wasPaidToRecipient()) {
             val expiryBytes = take(reservation, TIMESTAMP_SIZE)
             val expiry = BigInteger(expiryBytes)
             if (expiry.toInt() > nowTime) {
@@ -796,7 +804,7 @@ object HubContract : SmartContract() {
    //region demands
 
    /**
-    * Creates a new [Demand].
+    * Creates a new [Demand] object.
     *
     * Demand details:
     *   - pickup and destination cities (hashed) (kept in storage key)
@@ -811,12 +819,25 @@ object HubContract : SmartContract() {
     * @param itemSize the size of the item (on a scale of 1-5)
     * @param itemValue the value of the item in GAS as a fixed8 int
     * @param infoBlob a 128 character string describing the desired item and the demand owner's contact details
+    * @param nowTime the current unix timestamp in seconds
+    * @return the serialized [Demand] or an empty byte array on failure
     */
    private fun demand_create(owner: ScriptHash, expiry: BigInteger, repRequired: BigInteger, itemSize: BigInteger,
-                             itemValue: BigInteger, infoBlob: ByteArray): Demand {
+                             itemValue: BigInteger, infoBlob: ByteArray, nowTime: Int): Demand {
       val nil = byteArrayOf()
-      if (itemValue.toLong() > MAX_GAS_TX_VALUE)
+      // validate inputs
+      if (itemValue.toLong() < MIN_GAS_ITEM_VALUE)
          return nil
+      if (itemValue.toLong() > MAX_GAS_ITEM_VALUE)
+         return nil
+      if (itemValue.toLong() <= 0)
+         return nil
+      if (expiry.toLong() < nowTime as Long)
+         return nil
+      if (itemSize.toLong() <= 0)
+         return nil
+      // there is no need to validate out a negative repRequired or overly large ints here.
+      // the size check below will catch the latter!
       // size: 160 bytes
       val expectedSize = DEMAND_SIZE
       val demand = expiry.toByteArray(TIMESTAMP_SIZE)
@@ -825,8 +846,7 @@ object HubContract : SmartContract() {
             .concat(repRequired.toByteArray(REP_REQUIRED_SIZE))
             .concat(itemSize.toByteArray(CARRY_SPACE_SIZE))
             .concat(infoBlob)
-      // checking individual arg lengths doesn't seem to work here
-      // I tried a lot of things, grr compiler
+      // checking individual arg lengths would be the most ideal form of validation here, but that didn't want to compile
       if (demand.size != expectedSize) {
          Runtime.notify("CL:ERR:UnexpectedDemandSize", demand)  // compiler woes
          return nil
@@ -839,16 +859,22 @@ object HubContract : SmartContract() {
     *
     * @param owner the owner of the demand
     * @param cityPairHash the ripemd160 hash of: script hash (hex) (salt) + origin city + destination city (ascii)
+    * @return true on success
     */
    private fun Demand.demand_storeAndMatch(owner: ScriptHash, cityPairHash: Hash160, nowTime: Int): Boolean {
       log_debug("CL:DBG:Demand.store")
 
-      // owner state lock
-      Storage.put(Storage.currentContext(), owner, this)
+      val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
+      val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
+
+      // owner state lock with timestamp
+      // so that it's straightforward for the client to know which block this landed in
+      val demandWithTime = this.concat(nowTimeBytes)
+      Storage.put(Storage.currentContext(), owner, demandWithTime)
 
       // store the demand object (lookup key)
       val lookupKey = this.demand_getLookupKey(cityPairHash, nowTime)
-      Storage.put(Storage.currentContext(), lookupKey, this)
+      Storage.put(Storage.currentContext(), lookupKey, demandWithTime)
 
       // store the demand object (cities hash key) for matching
       val cityPairHashKeyD = cityPairHash.demand_getStorageKey()
@@ -878,7 +904,7 @@ object HubContract : SmartContract() {
          val demandExpiry = this.demand_getExpiry()
 
          // do the matching
-         val matchedTravel = travelsForCityPair.travel_findMatchableTravel(repRequired, carrySpaceRequired, demandExpiry, nowTime, false)
+         val matchedTravel = travelsForCityPair.travels_findMatchableTravel(repRequired, carrySpaceRequired, demandExpiry, nowTime)
          if (matchedTravel.isEmpty()) {  // no match
             log_debug("CL:DBG:NoMatchableTravelForDemand:2")
 
@@ -886,17 +912,19 @@ object HubContract : SmartContract() {
             this.demand_reserveValueAndFee(owner)
             log_info("CL:OK:ReservedDemandValueAndFee:2")
          } else {
+            // the compiler really wants this here!
+            val nowTimeBigInt2 = BigInteger.valueOf(nowTime as Long)
+            val nowTimeBytes2 = nowTimeBigInt2.toByteArray(TIMESTAMP_SIZE)
+
             // match demand -> travel
-            val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
-            val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
             val matchKey = this.demand_getMatchKey()
-            val timestampedMatch = matchedTravel.concat(nowTimeBytes)
+            val timestampedMatch = matchedTravel.concat(nowTimeBytes2)
             Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
             log_info("CL:OK:MatchedDemandWithTravel")
 
             // match travel -> demand
             val otherMatchKey = matchedTravel.travel_getMatchKey()
-            val timestampedOtherMatch = this.concat(nowTimeBytes)
+            val timestampedOtherMatch = this.concat(nowTimeBytes2)
             Storage.put(Storage.currentContext(), otherMatchKey, timestampedOtherMatch)
             log_info("CL:OK:MatchedTravelWithDemand")
 
@@ -959,7 +987,7 @@ object HubContract : SmartContract() {
     * @return the [Demand] object or an empty array if nothing found
     */
    private fun DemandList.demands_findMatchableDemand(repRequired: BigInteger, carrySpaceAvailable: BigInteger,
-                                                      expiresAfter: BigInteger, nowTime: Int, assumeUnmatched: Boolean): Demand {
+                                                      expiresAfter: BigInteger, nowTime: Int): Demand {
       val nil = byteArrayOf()
       if (this.isEmpty())
          return nil
@@ -970,6 +998,7 @@ object HubContract : SmartContract() {
          val expiryBytes = take(demand, TIMESTAMP_SIZE)
          val expiry = BigInteger(expiryBytes)
          val itemSize = demand.demand_getItemSize()
+         val demandMatchKey = demand.demand_getMatchKey()
          var ownerRep = repRequired
          if (repRequired > BigInteger.valueOf(0)) {
             val owner = demand.demand_getOwnerScriptHash()
@@ -979,7 +1008,7 @@ object HubContract : SmartContract() {
                expiry > expiresAfter &&
                ownerRep >= repRequired &&
                carrySpaceAvailable >= itemSize &&
-               (assumeUnmatched || ! demand.demand_isMatched()))
+               Storage.get(Storage.currentContext(), demandMatchKey).isEmpty())  // inlined demand_isMatched(), ❤ compiler
             return demand
          i++
       }
@@ -995,7 +1024,7 @@ object HubContract : SmartContract() {
       log_debug("CL:DBG:Demand.isMatched")
       val matchKey = this.demand_getMatchKey()
       val match = Storage.get(Storage.currentContext(), matchKey)
-      return !match.isEmpty()
+      return ! match.isEmpty()
    }
 
    /**
@@ -1124,7 +1153,7 @@ object HubContract : SmartContract() {
    //region travel
 
    /**
-    * Creates a new [Travel].
+    * Creates a new [Travel] object.
     *
     * Travel details:
     *   - pickup and destination cities (hashed) (kept in storage key)
@@ -1137,16 +1166,20 @@ object HubContract : SmartContract() {
     * @param expiry the time that the demand expires as a unix timestmap
     * @param repRequired the reputation required of a demander in order for this travel to be matched
     * @param carrySpace the carry space available (on a scale of 1-5)
+    * @param nowTime the current unix timestamp in seconds
+    * @return the serialized [Travel] or an empty byte array on failure
     */
-   private fun travel_create(owner: ScriptHash, expiry: BigInteger, repRequired: BigInteger, carrySpace: BigInteger): Travel {
+   private fun travel_create(owner: ScriptHash, expiry: BigInteger, repRequired: BigInteger, carrySpace: BigInteger, nowTime: Int): Travel {
       val nil = byteArrayOf()
+      // no validation necessary, because:
+      // - if expiry, repRequired or carrySpace are < 0 this Travel will simply never be matched
+      // - any abuse of BigInteger sizes (e.g. a huge repRequired) will overflow its allocated slot and result in a nil return value
       // size: 27 bytes
       val travel = expiry.toByteArray(TIMESTAMP_SIZE)
             .concat(repRequired.toByteArray(REP_REQUIRED_SIZE))
             .concat(carrySpace.toByteArray(CARRY_SPACE_SIZE))
             .concat(owner)
-      // checking individual arg lengths doesn't seem to work here
-      // I tried a lot of things, grr compiler
+      // checking individual arg lengths would be the most ideal form of validation here, but that didn't want to compile
       if (travel.size != TRAVEL_SIZE) {
          Runtime.notify("CL:ERR:UnexpectedTravelSize", travel)
          return nil
@@ -1164,12 +1197,17 @@ object HubContract : SmartContract() {
    private fun Travel.travel_storeAndMatch(owner: ScriptHash, cityPairHash: Hash160, nowTime: Int): Boolean {
       log_debug("CL:DBG:Travel.store")
 
-      // owner state lock
-      Storage.put(Storage.currentContext(), owner, this)
+      val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
+      val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
+
+      // owner state lock with timestamp
+      // so that it's straightforward for the client to know which block this landed in
+      val travelWithTime = this.concat(nowTimeBytes)
+      Storage.put(Storage.currentContext(), owner, travelWithTime)
 
       // store the travel object (lookup key)
       val lookupKey = this.travel_getLookupKey(cityPairHash, nowTime)
-      Storage.put(Storage.currentContext(), lookupKey, this)
+      Storage.put(Storage.currentContext(), lookupKey, travelWithTime)
 
       // store the travel object (cities hash key) for matching
       val cityPairHashKey = cityPairHash.travel_getStorageKey()
@@ -1192,15 +1230,13 @@ object HubContract : SmartContract() {
          val travelExpiry = this.travel_getExpiry()
 
          // do the matching
-         val matchedDemand = demandsForCityPair.demands_findMatchableDemand(repRequired, carrySpaceAvailable, travelExpiry, nowTime, false)
+         val matchedDemand = demandsForCityPair.demands_findMatchableDemand(repRequired, carrySpaceAvailable, travelExpiry, nowTime)
          if (! matchedDemand.isEmpty()) {
             // match travel -> demand
             val matchKey = this.travel_getMatchKey()
-            val nowTimeBigInt = BigInteger.valueOf(nowTime as Long)
-            val nowTimeBytes = nowTimeBigInt.toByteArray(TIMESTAMP_SIZE)
             val timestampedMatch = matchedDemand.concat(nowTimeBytes)
             Storage.put(Storage.currentContext(), matchKey, timestampedMatch)
-            log_info("CL:OK:TravelWithDemand")
+            log_info("CL:OK:MatchedTravelWithDemand")
 
             // match demand -> travel
             val otherMatchKey = matchedDemand.demand_getMatchKey()
@@ -1210,9 +1246,10 @@ object HubContract : SmartContract() {
 
             // switch the traveller's existing deposit reservation to one that expires after the demand
             // unfortunately this line must be here due to compiler troubles with anything more complex
-            val newExpiry = matchedDemand.demand_getExpiry() + TRAVEL_EXTRA_EXPIRY_ON_MATCH as BigInteger
+            val demandExpiry = matchedDemand.demand_getExpiry()
+            val newExpiry = demandExpiry + TRAVEL_EXTRA_EXPIRY_ON_MATCH as BigInteger
             this.travel_overwriteExpiry(owner, newExpiry)
-            log_debug("CL:OK:UpdatedTravelExpiry")
+            // it's ok to proceed if that was false. the overall state is still fine.
 
             // overwrite the reservation that was created with the matched demand
             // this means that we inject the traveller's script hash as the "recipient" of the reserved funds
@@ -1221,7 +1258,7 @@ object HubContract : SmartContract() {
             val demandValue = matchedDemand.demand_getTotalValue()
             val ownerReservationList = demandOwner.wallet_getFundReservations()
             val reservationAtIdx = ownerReservationList.res_findByValue(demandValue)
-            if (reservationAtIdx > 0) {
+            if (reservationAtIdx >= 0) {
                val rewrittenReservationList = ownerReservationList.res_replaceRecipientAt(reservationAtIdx, owner)
                demandOwner.wallet_storeFundReservations(rewrittenReservationList)
                log_debug("CL:OK:UpdatedDemandFundsReservation")
@@ -1277,21 +1314,8 @@ object HubContract : SmartContract() {
     * @param expiry the new expiry time
     */
    private fun Travel.travel_overwriteExpiry(owner: ScriptHash, expiry: BigInteger) {
-      // re-reserve the funds
       val deposit = BigInteger.valueOf(FEE_TRAVEL_DEPOSIT)
       owner.wallet_reserveFunds(expiry, deposit, owner)
-
-      // overwrite the expiry in the traveller's "state lock" object too
-      val expiryBytes = expiry.toByteArray(TIMESTAMP_SIZE)
-      if (expiryBytes.size === TIMESTAMP_SIZE) {
-         val travelRemainder = range(this, TIMESTAMP_SIZE, TRAVEL_SIZE - TIMESTAMP_SIZE)
-         val newTravel = expiryBytes.concat(travelRemainder)
-         Storage.put(Storage.currentContext(), owner, newTravel)
-      } else {
-         // we'll end up here if the expiry timestamp is too large to fit in a 4 byte int.
-         // it's ok to proceed. the system's state is still fine. the user is just trying to mess with us anyway.
-         Runtime.notify("CL:ERR:NewTimestampSize", expiryBytes.size as ByteArray)
-      }
    }
 
    /**
@@ -1303,8 +1327,8 @@ object HubContract : SmartContract() {
     * @param nowTime the current unix timestamp in seconds
     * @return the [Travel] object or an empty array if nothing found
     */
-   private fun TravelList.travel_findMatchableTravel(repRequired: BigInteger, carrySpaceRequired: BigInteger,
-                                                     expiryLimit: BigInteger, nowTime: Int, assumeUnmatched: Boolean): Travel {
+   private fun TravelList.travels_findMatchableTravel(repRequired: BigInteger, carrySpaceRequired: BigInteger,
+                                                      expiryLimit: BigInteger, nowTime: Int): Travel {
       val nil = byteArrayOf()
       if (this.isEmpty())
          return nil
@@ -1315,6 +1339,7 @@ object HubContract : SmartContract() {
          val expiryBytes = take(travel, TIMESTAMP_SIZE)
          val expiry = BigInteger(expiryBytes)
          val carrySpaceAvailable = travel.travel_getCarrySpace()
+         val travelMatchKey = travel.travel_getMatchKey()
          var ownerRep = repRequired
          if (repRequired > BigInteger.valueOf(0)) {
             val owner = travel.travel_getOwnerScriptHash()
@@ -1324,7 +1349,7 @@ object HubContract : SmartContract() {
                expiry < expiryLimit &&
                ownerRep >= repRequired &&
                carrySpaceAvailable >= carrySpaceRequired &&
-               (assumeUnmatched || ! travel.travel_isMatched()))
+               Storage.get(Storage.currentContext(), travelMatchKey).isEmpty())
             return travel
          i++
       }
@@ -1340,7 +1365,7 @@ object HubContract : SmartContract() {
       log_debug("CL:DBG:Travel.isMatched")
       val matchKey = this.travel_getMatchKey()
       val match = Storage.get(Storage.currentContext(), matchKey)
-      return !match.isEmpty()
+      return ! match.isEmpty()
    }
 
    /**
@@ -1515,8 +1540,6 @@ object HubContract : SmartContract() {
     * The GAS asset ID as a byte array.
     */
    private fun getGasAssetId(): ByteArray {
-      //return Storage.get(Storage.currentContext(), "AssetID")
-      // now reversed. see: https://git.io/vdM02
       val gasAssetId = byteArrayOf(
          231 as Byte, 45, 40, 105, 121, 238 as Byte, 108, 177 as Byte, 183 as Byte, 230 as Byte, 93,
          253 as Byte, 223 as Byte, 178 as Byte, 227 as Byte, 132 as Byte, 16, 11, 141 as Byte,

@@ -139,7 +139,7 @@ namespace CLTests {
       }
 
       [Fact]
-      public void TestFindMatchableTravel() {
+      public void TestFindMatchableTravelPass() {
          ExecutionEngine engine = LoadContract("HubContract");
 
          var nowTime = 101;
@@ -192,6 +192,61 @@ namespace CLTests {
 
          var result = engine.EvaluationStack.Peek().GetByteArray();
          Assert.Equal(travel3, result);
+      }
+
+      [Fact]
+      public void TestFindMatchableTravelWhenFirstIsMatched() {
+         var nowTime = 101;
+         byte[] expiredExpiry = BitConverter.GetBytes(100).ToArray();
+         byte[] futureExpiry = BitConverter.GetBytes(102).ToArray();
+
+         // travel1 - suitable but matched :(
+         var travel1 = futureExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // repRequired
+            1, 0,
+            // carrySpace
+            3,
+            // owner script hash (appended)
+         }).Concat(ScriptHash).ToArray();
+
+         // travel2 - suitable, unmatched
+         var travel2 = futureExpiry.Concat(new byte[] {
+            // expiry (4 byte timestamp) (prepended)
+            // repRequired
+            1, 0,
+            // carrySpace
+            4,  // different to travel1 above
+            // owner script hash (appended)
+         }).Concat(ScriptHash).ToArray();
+
+         var travels = travel1.Concat(travel2).ToArray();
+
+         ExecutionEngine engine1 = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(new byte[] { 1 });  // args[1] - value
+            sb.EmitPush(travel1);  // args[0] - key
+            sb.EmitPush(2);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_storage_put");  // operation
+            ExecuteScript(engine1, sb);
+         }
+
+         ExecutionEngine engine2 = LoadContract("HubContract");
+         using (ScriptBuilder sb = new ScriptBuilder()) {
+            sb.EmitPush(nowTime);  // args[4] - nowTime
+            sb.EmitPush(1500000000);  // args[3] - expiresBefore, big int test :)
+            sb.EmitPush(3);  // args[2] - carrySpaceRequired
+            sb.EmitPush(0);  // args[1] - repRequired
+            sb.EmitPush(travels);  // args[0]
+            sb.EmitPush(5);
+            sb.Emit(OpCode.PACK);
+            sb.EmitPush("test_travel_findMatchableTravel");  // operation
+            ExecuteScript(engine2, sb);
+         }
+
+         var result = engine2.EvaluationStack.Peek().GetByteArray();
+         Assert.Equal(travel2, result);
       }
 
       [Fact]

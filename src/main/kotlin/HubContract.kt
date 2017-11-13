@@ -31,7 +31,6 @@ object HubContract : SmartContract() {
    private const val LOG_LEVEL = 3  // 1: errors, 2: info/warn, 3: debug
    private const val TESTS_ENABLED = true  // important! disable this for live deployments!
    private const val STATS_ENABLED = true  // enables stats recording and getters
-   private const val SECURITY_ENABLED = false  // enables checkWitness and wallet checks
 
    // Byte array sizes
    private const val VALUE_SIZE = 5
@@ -228,26 +227,13 @@ object HubContract : SmartContract() {
 
       //region State Mutators (Blockchain Invokes)
 
-      // The following operations can write state; verify that the sender is who they claim they are
-      if (SECURITY_ENABLED) {
-         if (operation === "demand_open" ||
-               operation === "travel_open" ||
-               operation === "wallet_setFundsPaidToRecipientTxHash") {
-            val sender: ScriptHash = args[0]
-            vm_throwIfNot(Runtime.checkWitness(sender))  // kotlin workaround
-            log_info("CL:OK:checkWitness")
-         }
-      }
-
       // Open and try to match a Demand
       if (operation === "demand_open") {
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-         if (SECURITY_ENABLED) {
-            val outgoingAmount = BigInteger(args[5])
-            if (! args[0].wallet_validateFunds(args[1], outgoingAmount as Long, nowTime))
-               return false
-         }
-         if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
+         val outgoingAmount = BigInteger(args[5])
+         if (args[0].wallet_validate(args[1]) &&
+               args[0].wallet_hasFunds(outgoingAmount as Long, nowTime) &&
+               args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val route = args[7]
             val demand = demand_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), BigInteger(args[5]), args[6], nowTime)
             if (! demand.isEmpty() &&
@@ -267,11 +253,9 @@ object HubContract : SmartContract() {
       // Open and try to match a Travel
       if (operation === "travel_open") {
          val nowTime = Blockchain.getHeader(Blockchain.height()).timestamp()
-         if (SECURITY_ENABLED) {
-            if (! args[0].wallet_validateFunds(args[1], FEE_TRAVEL_DEPOSIT, nowTime))
-               return false
-         }
-         if (args[0].wallet_canOpenDemandOrTravel(nowTime)) {
+         if (args[0].wallet_validate(args[1]) &&
+               args[0].wallet_hasFunds(FEE_TRAVEL_DEPOSIT, nowTime) &&
+               args[0].wallet_canOpenDemandOrTravel(nowTime)) {
             val route = args[5]
             val travel = travel_create(args[0], BigInteger(args[2]), BigInteger(args[3]), BigInteger(args[4]), nowTime)
             if (! travel.isEmpty() &&
@@ -289,12 +273,9 @@ object HubContract : SmartContract() {
 
       // Exchange: Demand owner refunds the Travel owner
       if (operation === "wallet_setFundsPaidToRecipientTxHash") {
-         if (SECURITY_ENABLED) {
-            if (! args[0].wallet_validate(args[1]))
-               return false
-         }
          // if true the entire Chain Line transaction is complete
-         if (args[0].wallet_setFundsPaidToRecipientTxHash(args[2], BigInteger(args[3]), args[4])) {
+         if (args[0].wallet_validate(args[1]) &&
+               args[0].wallet_setFundsPaidToRecipientTxHash(args[2], BigInteger(args[3]), args[4])) {
             // reset account states, allow for new transactions
             args[0].wallet_clearState()
             args[2].wallet_clearState()
@@ -351,35 +332,42 @@ object HubContract : SmartContract() {
    //region wallets
 
    /**
-    * Validates an individual user wallet.
+    * Calls [Runtime.checkWitness] on the provided script hash.
+    * Avoids making the call if the current ScriptContainer is null, which is the case when rpc "invokescript" is used.
+    */
+   private fun ScriptHash.wallet_checkWitness(): Boolean {
+      log_debug("CL:DBG:wallet_checkWitness")
+      // this skips checkWitness when a local invocation (via rpc invokescript) is performed
+      // since ScriptContainer is null in this case it causes a VM fault.
+      if (vm_booland(ExecutionEngine.scriptContainer(), true)) {
+         vm_throwIfNot(Runtime.checkWitness(this))
+         log_info("CL:OK:checkWitness")
+      }
+      return true
+   }
+
+   /**
+    * Calls [wallet_checkWitness] on and validates the integrity of the provided script hash.
     *
+    * @see wallet_checkWitness
     * @param pubKey the script hash of the user wallet to validate
     * @return true if the wallet is valid
     */
    private fun ScriptHash.wallet_validate(pubKey: PublicKey): Boolean {
       log_debug("CL:DBG:wallet_validate")
       val expectedScript =
-            getWalletScriptP1()
-               .concat(pubKey)
-               .concat(getWalletScriptP2())
-               .concat(ExecutionEngine.executingScriptHash())
-               .concat(getWalletScriptP3())
+         getWalletScriptP1()
+            .concat(pubKey)
+            .concat(getWalletScriptP2())
+            .concat(ExecutionEngine.executingScriptHash())
+            .concat(getWalletScriptP3())
       val expectedScriptHash = hash160(expectedScript)
-      if (this === expectedScriptHash)
+      if (this.wallet_checkWitness() &&
+            this === expectedScriptHash)
          return true
       Runtime.notify("CL:ERR:WalletValidate", expectedScriptHash, expectedScript)  // the compiler does not like log_* here
       return false
    }
-
-   /**
-    * Validates an individual user wallet and checks its effective balance to ensure a transaction is clear to proceed.
-    *
-    * @param pubKey the script hash of the user wallet to validate
-    * @param outgoingAmount the outgoing amount of GAS as a fixed8 long
-    * @return true if the transaction is clear to proceed
-    */
-   private fun ScriptHash.wallet_validateFunds(pubKey: PublicKey, outgoingAmount: Long, nowTime: Int): Boolean =
-      this.wallet_validate(pubKey) && this.wallet_hasFunds(outgoingAmount, nowTime)
 
    /**
     * Gets the GAS balance of a user wallet.
@@ -398,7 +386,7 @@ object HubContract : SmartContract() {
     * @return true if the transaction is clear to proceed
     */
    private fun ScriptHash.wallet_requestTxOut(nowTime: Int): Boolean {
-      log_debug("CL:DBG:requestTxOut")
+      log_debug("CL:DBG:wallet_requestTxOut")
       // need to count the outputs again for security - a user could invoke directly with a fake value.
       // we have already validated the calling script at this point, we don't need to get the script hash from ExecutionEngine
       // the fact that the script has been validated means that the caller is accurate.
@@ -1674,6 +1662,13 @@ object HubContract : SmartContract() {
     */
    @Syscall("Neo.Account.GetBalance")
    private external fun getBalance(account: Account, asset_id: ByteArray): Long
+
+   /**
+    * Inserts the "BOOLAND" OpCode.
+    * Returns true if the given args are both true.
+    */
+   @OpCode(org.neo.vm._OpCode.BOOLAND)
+   private external fun vm_booland(arg0: Any, arg1: Any): Boolean
 
    /**
     * Inserts the "THROW" OpCode.

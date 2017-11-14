@@ -44,21 +44,30 @@ object WalletContract : SmartContract() {
       //if (Runtime.trigger() !== TriggerType.Verification)
       //   return true
 
-      // find the GAS value of tx outputs, is there an outgoing value?
+      // find the GAS value of the tx; is it worth making an appcall to check the reserved balance?
       val tx = ExecutionEngine.scriptContainer() as Transaction?
       val executingScriptHash = ExecutionEngine.executingScriptHash()
-      val outputs = tx!!.outputs()
-      var gasTxValue: Long = 0  // as a fixed8 int
-      outputs.forEach {
-         // invokes will not count as their GAS is returned to the caller
-         if (it.scriptHash() !== executingScriptHash &&
-               it.assetId() === gasAssetId)
+
+      // count all inputs first in case funds do not appear in outputs (system fee payments?)
+      val refs = tx!!.references()
+      var gasTxValue: Long = 0  // as a fixed8 long
+      refs.forEach {
+         if (it.assetId() === gasAssetId)
             gasTxValue += it.value()
       }
+      if (gasTxValue > 0) {
+         val outputs = tx.outputs()
+         outputs.forEach {
+            // invokes will not count as their GAS is returned to the caller
+            if (it.scriptHash() === executingScriptHash &&
+                  it.assetId() === gasAssetId)
+               gasTxValue -= it.value()
+         }
 
-      // call the HubContract to validate the withdrawal
-      if (gasTxValue > 0)
-         return HubContract("wallet_requestTxOut", executingScriptHash, ownerPubKey)
+         // call the HubContract to validate the withdrawal
+         if (gasTxValue > 0)
+            return HubContract("wallet_requestTxOut", executingScriptHash, ownerPubKey, gasTxValue)
+      }
 
       // allow anything else
       return true
@@ -67,7 +76,8 @@ object WalletContract : SmartContract() {
    /**
     * Calls the [HubContract] with the specified [operation] and [args].
     */
-   @Appcall("5cd7fe13c0762432bf151191b948c0436d3354c4")
+   // The target hash here must be in little endian (reversed when taken from the GUI)
+   @Appcall("4eda3d53166c5c1c3dbda21fd31d015024b0510b")
    private external fun HubContract(operation: String, vararg args: Any): Boolean
 
    /**

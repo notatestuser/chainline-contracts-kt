@@ -50,8 +50,8 @@ object HubContract : SmartContract() {
          TIMESTAMP_SIZE + REP_REQUIRED_SIZE + CARRY_SPACE_SIZE + SCRIPT_HASH_SIZE
 
    // Fees
-   private const val FEE_DEMAND_REWARD:  Long = 300000000  // 3 GAS
-   private const val FEE_TRAVEL_DEPOSIT: Long = 100000000  // 1 GAS
+   private const val FEE_DEMAND_REWARD:  Long = 400000000  // 4 GAS
+   private const val FEE_TRAVEL_DEPOSIT: Long = 200000000  // 2 GAS
 
    // Item value limits
    // the maximum value of a transaction is fixed at ~5497 GAS so that we can fit it into 5 bytes.

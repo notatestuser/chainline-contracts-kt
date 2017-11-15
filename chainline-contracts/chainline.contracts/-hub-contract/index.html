@@ -91,13 +91,6 @@
 </tr>
 <tr>
 <td>
-<p><a href="-s-e-c-u-r-i-t-y_-e-n-a-b-l-e-d.html">SECURITY_ENABLED</a></p>
-</td>
-<td>
-<code><span class="keyword">const</span> <span class="keyword">val </span><span class="identifier">SECURITY_ENABLED</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code></td>
-</tr>
-<tr>
-<td>
 <p><a href="-s-t-a-t-s_-e-n-a-b-l-e-d.html">STATS_ENABLED</a></p>
 </td>
 <td>
@@ -425,7 +418,7 @@ This form of the method is used when a <a href="../-travel.html">Travel</a> was 
 </td>
 <td>
 <code><span class="keyword">fun </span><span class="identifier">getGasAssetId</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a></code>
-<p>The GAS asset ID as a byte array.</p>
+<p>Returns the GAS asset ID as a byte array.</p>
 </td>
 </tr>
 <tr>
@@ -485,6 +478,15 @@ These parts are stored and then used to verify the integrity of user wallets in 
 </tr>
 <tr>
 <td>
+<p><a href="log_debug2.html">log_debug2</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">log_debug2</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$log_debug2(kotlin.String, kotlin.Any)/msg">msg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$log_debug2(kotlin.String, kotlin.Any)/arg">arg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html"><span class="identifier">Any</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Dispatches a <a href="#">Runtime.notify</a> with the specified args at the DEBUG level (3).</p>
+</td>
+</tr>
+<tr>
+<td>
 <p><a href="log_err.html">log_err</a></p>
 </td>
 <td>
@@ -506,7 +508,16 @@ These parts are stored and then used to verify the integrity of user wallets in 
 <p><a href="log_info2.html">log_info2</a></p>
 </td>
 <td>
-<code><span class="keyword">fun </span><span class="identifier">log_info2</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$log_info2(kotlin.String, kotlin.ByteArray)/msg">msg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$log_info2(kotlin.String, kotlin.ByteArray)/arg">arg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-byte-array/index.html"><span class="identifier">ByteArray</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<code><span class="keyword">fun </span><span class="identifier">log_info2</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$log_info2(kotlin.String, kotlin.Any)/msg">msg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$log_info2(kotlin.String, kotlin.Any)/arg">arg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html"><span class="identifier">Any</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
+<p>Dispatches a <a href="#">Runtime.notify</a> with the specified args at INFO level (2).</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="log_info3.html">log_info3</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">log_info3</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$log_info3(kotlin.String, kotlin.Any, kotlin.Any)/msg">msg</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html"><span class="identifier">String</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$log_info3(kotlin.String, kotlin.Any, kotlin.Any)/arg0">arg0</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html"><span class="identifier">Any</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$log_info3(kotlin.String, kotlin.Any, kotlin.Any)/arg1">arg1</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html"><span class="identifier">Any</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html"><span class="identifier">Unit</span></a></code>
 <p>Dispatches a <a href="#">Runtime.notify</a> with the specified args at INFO level (2).</p>
 </td>
 </tr>
@@ -578,7 +589,7 @@ These parts are stored and then used to verify the integrity of user wallets in 
 <p><a href="res_get-total-on-hold-gas-value.html">res_getTotalOnHoldGasValue</a></p>
 </td>
 <td>
-<code><span class="keyword">fun </span><a href="../-reservation-list.html"><span class="identifier">ReservationList</span></a><span class="symbol">.</span><span class="identifier">res_getTotalOnHoldGasValue</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$res_getTotalOnHoldGasValue(kotlin.ByteArray, kotlin.Int)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a></code>
+<code><span class="keyword">fun </span><a href="../-reservation-list.html"><span class="identifier">ReservationList</span></a><span class="symbol">.</span><span class="identifier">res_getTotalOnHoldGasValue</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$res_getTotalOnHoldGasValue(kotlin.ByteArray, kotlin.ByteArray, kotlin.Int)/excludeRecipient">excludeRecipient</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$res_getTotalOnHoldGasValue(kotlin.ByteArray, kotlin.ByteArray, kotlin.Int)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a></code>
 <p>Calculates the total value of GAS that a <a href="../-reservation-list.html">list of reserved funds</a> is holding, considering expiry
 times and whether funds were already paid out to the intended recipient.</p>
 </td>
@@ -831,6 +842,26 @@ This method also updates a wallet's "state lock" with the new expiry time.</p>
 </tr>
 <tr>
 <td>
+<p><a href="tx_get-outgoing-gas-value.html">tx_getOutgoingGasValue</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><span class="identifier">tx_getOutgoingGasValue</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$tx_getOutgoingGasValue(kotlin.ByteArray)/originator">originator</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a></code>
+<p>Finds the outgoing GAS value of the current transaction. This is useful for calculating whether the wallet can cover
+system fees when funds are going to be reserved in the invocation.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="vm_booland.html">vm_booland</a></p>
+</td>
+<td>
+<code><span class="keyword">external</span> <span class="keyword">fun </span><span class="identifier">vm_booland</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$vm_booland(kotlin.Any, kotlin.Any)/arg0">arg0</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html"><span class="identifier">Any</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$vm_booland(kotlin.Any, kotlin.Any)/arg1">arg1</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html"><span class="identifier">Any</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Inserts the "BOOLAND" OpCode.
+Returns true if the given args are both true.</p>
+</td>
+</tr>
+<tr>
+<td>
 <p><a href="vm_throw.html">vm_throw</a></p>
 </td>
 <td>
@@ -857,6 +888,16 @@ Aborts execution if the supplied <a href="vm_throw-if-not.html#chainline.contrac
 <code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_canOpenDemandOrTravel</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_canOpenDemandOrTravel(kotlin.ByteArray, kotlin.Int)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
 <p>Indicates whether a wallet is in a state that allows it to open a demand or travel.
 At the moment this contract supports one active transaction per user wallet at any one time.</p>
+</td>
+</tr>
+<tr>
+<td>
+<p><a href="wallet_check-witness.html">wallet_checkWitness</a></p>
+</td>
+<td>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_checkWitness</span><span class="symbol">(</span><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Calls <a href="#">Runtime.checkWitness</a> on the provided script hash.
+Avoids making the call if the current ScriptContainer is null, which is the case when rpc "invokescript" is used.</p>
 </td>
 </tr>
 <tr>
@@ -927,8 +968,9 @@ At the moment this contract supports one active transaction per user wallet at a
 <p><a href="wallet_has-funds.html">wallet_hasFunds</a></p>
 </td>
 <td>
-<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_hasFunds</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_hasFunds(kotlin.ByteArray, kotlin.Long, kotlin.Int)/amount">amount</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_hasFunds(kotlin.ByteArray, kotlin.Long, kotlin.Int)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
-<p>Check if the wallet has enough funds to perform a transaction after reserved funds are considered.</p>
+<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_hasFunds</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_hasFunds(kotlin.ByteArray, kotlin.Long, kotlin.ByteArray, kotlin.Int, kotlin.Boolean)/requiredBalance">requiredBalance</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_hasFunds(kotlin.ByteArray, kotlin.Long, kotlin.ByteArray, kotlin.Int, kotlin.Boolean)/excludeRecipient">excludeRecipient</span><span class="symbol">:</span>&nbsp;<a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_hasFunds(kotlin.ByteArray, kotlin.Long, kotlin.ByteArray, kotlin.Int, kotlin.Boolean)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_hasFunds(kotlin.ByteArray, kotlin.Long, kotlin.ByteArray, kotlin.Int, kotlin.Boolean)/countOutputs">countOutputs</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
+<p>Check if the wallet has enough funds to perform a transaction after reserved funds and tx outputs are considered.
+Note: Please ensure that the script has been through <a href="wallet_validate.html">wallet_validate</a> before this is called.</p>
 </td>
 </tr>
 <tr>
@@ -946,8 +988,8 @@ At the moment this contract supports one active transaction per user wallet at a
 </td>
 <td>
 <code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_requestTxOut</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_requestTxOut(kotlin.ByteArray, kotlin.Int)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
-<p>Requests permission to perform a withdrawal from a validated user wallet using the value in tx outputs.
-Note: Please ensure that the wallet has been validated before this is called.</p>
+<p>Requests permission to perform a withdrawal from a user wallet using the value in tx outputs.
+Note: Please ensure that the script has been through <a href="wallet_validate.html">wallet_validate</a> before this is called.</p>
 </td>
 </tr>
 <tr>
@@ -992,16 +1034,7 @@ Note: Please ensure that the wallet has been validated before this is called.</p
 </td>
 <td>
 <code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_validate</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_validate(kotlin.ByteArray, kotlin.ByteArray)/pubKey">pubKey</span><span class="symbol">:</span>&nbsp;<a href="../-public-key.html"><span class="identifier">PublicKey</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
-<p>Validates an individual user wallet.</p>
-</td>
-</tr>
-<tr>
-<td>
-<p><a href="wallet_validate-funds.html">wallet_validateFunds</a></p>
-</td>
-<td>
-<code><span class="keyword">fun </span><a href="../-script-hash.html"><span class="identifier">ScriptHash</span></a><span class="symbol">.</span><span class="identifier">wallet_validateFunds</span><span class="symbol">(</span><span class="identifier" id="chainline.contracts.HubContract$wallet_validateFunds(kotlin.ByteArray, kotlin.ByteArray, kotlin.Long, kotlin.Int)/pubKey">pubKey</span><span class="symbol">:</span>&nbsp;<a href="../-public-key.html"><span class="identifier">PublicKey</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_validateFunds(kotlin.ByteArray, kotlin.ByteArray, kotlin.Long, kotlin.Int)/outgoingAmount">outgoingAmount</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html"><span class="identifier">Long</span></a><span class="symbol">, </span><span class="identifier" id="chainline.contracts.HubContract$wallet_validateFunds(kotlin.ByteArray, kotlin.ByteArray, kotlin.Long, kotlin.Int)/nowTime">nowTime</span><span class="symbol">:</span>&nbsp;<a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-int/index.html"><span class="identifier">Int</span></a><span class="symbol">)</span><span class="symbol">: </span><a href="https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html"><span class="identifier">Boolean</span></a></code>
-<p>Validates an individual user wallet and checks its effective balance to ensure a transaction is clear to proceed.</p>
+<p>Calls <a href="wallet_check-witness.html">wallet_checkWitness</a> on and validates the integrity of the provided script hash.</p>
 </td>
 </tr>
 </tbody>

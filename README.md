@@ -1,11 +1,10 @@
 ![Chain Line](http://d.pr/f/Oo2c4f+)
 
-Get anything to anywhere, powered by the blockchain. Chain Line uses a network of untrusted peers to get products and valuable items to their destinations with near-zero risk.
+**Get anything to anywhere, powered by the blockchain.** Chain Line is a modern peer-to-peer courier network that gets products and valuable items to their destinations with near-zero risk.
 
-Behind Chain Line is a bold vision: to introduce a modern peer-to-peer courier platform to address the needs of shipping companies and individuals alike, powered entirely by a smart contract.
+It works by moving an item's cost between peers as it travels through the system. A central "hub" contract controls "reserved funds" in Chain Line [smart wallets](https://github.com/notatestuser/chainline-contracts-kt/wiki/Smart-Wallet) running custom verification scripts. Chain Line features a user reputation system and relies on no external systems, operating entirely on the blockchain.
 
-It works by re-assigning an item's cost between peers as it travels through the system. Several unique concepts make this happen: a centralised "hub" contract controls "reserved funds" in unique Chain Line user wallets running custom verification scripts. Chain Line features a user reputation system and relies on no external "oracle" systems, operating entirely on the blockchain.
-
+#### Learn more:&nbsp;&nbsp; [Wiki](https://github.com/notatestuser/chainline-contracts-kt/wiki) &nbsp; [User Guide](https://github.com/notatestuser/chainline-webapp/wiki/Web-App-User-Guide) &nbsp; [Intro Video](https://f001.backblazeb2.com/file/chainline-assets/explainer.mp4)
 ---
 
 # Chain Line Contracts

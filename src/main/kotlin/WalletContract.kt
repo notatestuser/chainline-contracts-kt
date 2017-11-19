@@ -20,8 +20,7 @@ object WalletContract : SmartContract() {
     */
    fun Main(signature: ByteArray): Boolean {
       // the account owner's public key
-      // included in at wallet creation time
-      // converter: https://conv.darkbyte.ru
+      // included in at wallet creation time (by chainline-js)
       val ownerPubKey = byteArrayOf(
             3, 114, 247 as Byte, 98, 137 as Byte, 198 as Byte, 155 as Byte, 181 as Byte, 138 as Byte, 142 as Byte, 92, 125, 43, 79,
             21, 38, 234 as Byte, 139 as Byte, 38, 192 as Byte, 131 as Byte, 178 as Byte, 169 as Byte, 88, 194 as Byte, 30, 188 as Byte,
@@ -77,7 +76,7 @@ object WalletContract : SmartContract() {
     * Calls the [HubContract] with the specified [operation] and [args].
     */
    // The target hash here must be in little endian (reversed when taken from the GUI)
-   @Appcall("4eda3d53166c5c1c3dbda21fd31d015024b0510b")
+   @Appcall("0000000000000000000000000000000000000000")
    private external fun HubContract(operation: String, vararg args: Any): Boolean
 
    /**

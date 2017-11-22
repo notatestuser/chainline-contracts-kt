@@ -137,7 +137,7 @@ namespace CLTests {
          }
 
          var result = engine.EvaluationStack.Peek().GetBigInteger();
-         Assert.Equal(400000000, result);  // item + fee (3 GAS)
+         Assert.Equal(500000000, result);  // item (1 GAS) + fee (4 GAS)
       }
 
       [Fact]

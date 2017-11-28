@@ -519,20 +519,11 @@ object HubContract : SmartContract() {
    private fun ScriptHash.wallet_canOpenDemandOrTravel(nowTime: Int): Boolean {
       log_debug("CL:DBG:canOpenDemandOrTravel?")
 
-      // check fund reservations
+      // check active fund reservations (should be enough)
       val nil = byteArrayOf(0)
       val reservations = this.wallet_getFundReservations()
       val gasOnHold = reservations.res_getTotalOnHoldGasValue(nil, nowTime)
       if (gasOnHold > 0)
-         return false
-
-      // check the state object
-      val stateObject = Storage.get(Storage.currentContext(), this)
-      if (stateObject.isEmpty())
-         return true
-      val expiryBytes = take(stateObject, TIMESTAMP_SIZE)
-      val expiry = BigInteger(expiryBytes)
-      if (nowTime > expiry.toInt())
          return false
 
       return true
